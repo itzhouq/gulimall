@@ -9,3 +9,30 @@ buildNumber.properties
 .mvn/timing.properties
 # https://github.com/takari/maven-wrapper#usage-without-binary-jar
 .mvn/wrapper/maven-wrapper.jar
+
+
+**/mvnw
+**/mvnw.cmd
+**/.mvn
+
+**/target/
+
+.idea
+
+**/.gitignore
+
+*.iws
+*.iml
+*.ipr
+log/
+
+### NetBeans ###
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+data/
+
+.DS_Store
