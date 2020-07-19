@@ -601,11 +601,198 @@ git status  ## 查看代码状态
 git add .   ## 将没有被忽略的文件都添加到版本控制
 git commit -m "project init"   ## 提交代码到本地仓库
 git push origin master         ## 推送代码到远程 master 分支
-git checkout -b dev              ## 创建一个 dev 分支并切换到该分支
+git checkout -b dev            ## 创建一个 dev 分支并切换到该分支
+git remote prune origin        ## 删除远程无效分支
 ```
 
 7、数据库初始化
 
+---
+
+
+
+## 四、快速开发
+
+### 1、人人开源搭建后台管理系统
+
+后台管理系统使用【人人开源】的脚手架搭建。
+
+前端：https://gitee.com/renrenio/renren-fast-vue
+
+后端：https://gitee.com/renrenio/renren-fast
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200719091310.png)
+
+
+
+下载上述两个项目到本地。分别删除其中的`.git`文件夹。
+
+将后端项目拷贝到总项目根目录下，添加到模块中。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200719092047.png)
+
+- 初始化数据库
+
+新建数据库 gulimall-admin，执行项目下`db/mysql.sql`文件初始化数据库。
+
+修改数据库连接配置信息。启动项目。
+
+
+
+- 前端初始化
+
+使用 Vscode 打开项目。确保有 node 环境。
+
+Npm 是随 node 一起安装的包管理工具。为了加快下载依赖速度，需要配置 npm 使用淘宝镜像：
+
+```shell
+# itzhouq @ itzhouqdeMacBook-Pro in ~ [10:41:50]
+$ npm config set registry https://registry.npm.taobao.org
+
+# itzhouq @ itzhouqdeMacBook-Pro in ~ [10:42:48]
+$ npm config get registry
+https://registry.npm.taobao.org/
+```
+
+
+
+- 下载依赖
+
+进入前端项目根目录下，执行以下命令：
+
+```shell
+npm install
+```
+
+依赖下载完成之后启动项目
+
+- 启动前端项目
+
+```shell
+npm run dev
+```
+
+前端项目下载依赖的时候容易报错，注意看报错信息。我遇到一个依赖需要手动下载。
+
+- 前后端联调
+
+启动后端项目，前端能登录进去就说明调通了。
+
+---
+
+### 2、逆向工程搭建和使用
+
+- 下载逆向工程
+
+  下载 renren-generator 到本地  https://gitee.com/renrenio/renren-generator.git。
+
+  删除文件夹中的 `.git/`文件夹，导入总项目。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200719154402.png)
+
+- 修改 renren-generator 配置
+
+修改 application.yml 的数据库连接为 pms 数据库。
+
+修改 generator.properties 代码生成器信息。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200719155017.png)
+
+注释掉 `resource/template/Controller.java.vm`文件中的所有的 `@RequiresPermissions`注解。
+
+这个是跟 `Shrio`相关的注解，暂时用不上。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200719155417.png)
+
+- 启动项目，生成代码
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200719155901.png)
+
+
+
+下载解压文件，将 `main`文件夹拷贝到 `product`项目的 `src`目录下，替换原来的 `main`文件夹。下面解决报错和依赖问题。
+
+- 创建common 模块
+
+使用 maven 创建一个 `gulimall-common`模块，其余的模块都依赖于这个模块。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200719161005.png)
+
+在 `product`模块中引入`common`模块的依赖：
+
+```xml
+<dependency>
+  <groupId>com.atguigu.gulimall</groupId>
+  <artifactId>gulimall-common</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+</dependency>
+```
+
+- 根据 `prodcut`中的报错信息，导入相关依赖。
+
+---
+
+### 3、配置和测试微服务基本 CRUD 功能
+
+- 整合`mybatis-plus`
+
+1、导入依赖
+
+在 `product`模块中导入 `mybatis-plus`依赖：
+
+```xml
+<dependency>
+  <groupId>com.baomidou</groupId>
+  <artifactId>mybatis-plus-boot-starter</artifactId>
+  <version>3.3.1</version>
+</dependency>
+```
+
+2、配置
+
+ `product`模块中新建 `application.yml`。配置数据源和mappers文件位置、主键生成策略。
+
+```yml
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://47.96.30.109:3306/gulimall_pms?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml    # 配置 mapper 文件的位置
+  global-config:
+    db-config:
+      id-type: auto  # 配置主键生成规则
+```
+
+在启动类上添加`@MapperScan`注解。
+
+```java
+@MapperScan("com.atguigu.gulimall.product.dao")
+@SpringBootApplication
+public class GulimallProductApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(GulimallProductApplication.class, args);
+    }
+}
+```
+
+- 测试
+
+在 `GulimallProductApplicationTests`测试类中编写单元测试。
+
+---
+
+### 4、逆向工程生成所有微服务基本 CRUD 代码
+
+采用上述类似方式生成代码，注意修改配置。
+
+---
+
+## 五、分布式组件
 
 
 
