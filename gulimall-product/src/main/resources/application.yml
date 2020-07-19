@@ -12,3 +12,6 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: auto  # 配置主键生成规则
+
+server:
+  port: 10000

@@ -7,27 +7,9 @@ spring:
     type: com.alibaba.druid.pool.DruidDataSource
     #MySQL配置
     driverClassName: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://47.96.30.109:3306/gulimall_pms?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://47.96.30.109:3306/gulimall_wms?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai
     username: root
     password: 123456
-    #oracle配置
-    #    driverClassName: oracle.jdbc.OracleDriver
-    #    url: jdbc:oracle:thin:@47.100.206.162:1521:xe
-    #    username: renren
-    #    password: 123456
-    #SQLServer配置
-    #    driverClassName: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    #    url: jdbc:sqlserver://192.168.10.10:1433;DatabaseName=renren_fast
-    #    username: sa
-    #    password: 123456
-    #PostgreSQL配置
-  #    driverClassName: org.postgresql.Driver
-  #    url: jdbc:postgresql://192.168.10.10:5432/renren_fast
-  #    username: postgres
-  #    password: 123456
-
-
-
   jackson:
     time-zone: GMT+8
     date-format: yyyy-MM-dd HH:mm:ss
