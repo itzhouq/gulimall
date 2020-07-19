@@ -6,7 +6,7 @@
  * 版权所有，侵权必究！
  */
 
-package com.atguigu.common.common.utils;
+package com.atguigu.common.utils;
 
 import com.alibaba.druid.util.StringUtils;
 import org.slf4j.Logger;

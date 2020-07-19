@@ -6,7 +6,7 @@
  * 版权所有，侵权必究！
  */
 
-package com.atguigu.common.common.xss;
+package com.atguigu.common.xss;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
