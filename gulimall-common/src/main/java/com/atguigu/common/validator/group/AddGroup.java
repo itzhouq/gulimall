@@ -6,14 +6,12 @@
  * 版权所有，侵权必究！
  */
 
-package com.atguigu.common.common.validator.group;
+package com.atguigu.common.validator.group;
 
 /**
- * 更新数据 Group
+ * 新增数据 Group
  *
  * @author Mark sunlightcs@gmail.com
  */
-
-public interface UpdateGroup {
-
+public interface AddGroup {
 }

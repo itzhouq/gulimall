@@ -6,7 +6,7 @@
  * 版权所有，侵权必究！
  */
 
-package com.atguigu.common.common.utils;
+package com.atguigu.common.utils;
 
 import org.apache.http.HttpStatus;
 

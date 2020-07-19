@@ -6,7 +6,7 @@
  * 版权所有，侵权必究！
  */
 
-package com.atguigu.common.common.validator.group;
+package com.atguigu.common.validator.group;
 
 import javax.validation.GroupSequence;
 
