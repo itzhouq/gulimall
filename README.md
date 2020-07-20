@@ -794,11 +794,120 @@ public class GulimallProductApplication {
 
 ## 五、分布式组件
 
+**Spring Cloud Alibaba 中文文档：https://github.com/alibaba/spring-cloud-alibaba/blob/master/README-zh.md**
+
+根据官网，使用之前先使用版本管理限定版本。在 common 模块中引入：
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+            <version>2.1.0.RELEASE</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
 
 
 
+### 1、Nacos
+
+官网：https://nacos.io/zh-cn/docs/quick-start.html
+
+GitHub实例：https://github.com/alibaba/spring-cloud-alibaba/blob/master/spring-cloud-alibaba-examples/nacos-example/nacos-discovery-example/readme-zh.md 。
+
+- 引入依赖 Nacos Discovery Starter
+
+在 common 中引入：
+
+```xml
+<dependency>
+     <groupId>com.alibaba.cloud</groupId>
+     <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+ </dependency>
+```
+
+- 配置 Nacos Server 的地址
+
+如果我们需要将 coupon 模块注册到注册中心，需要在 coupon 模块的配置文件中添加配置。
+
+```yml
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+```
+
+- 使用 @EnableDiscoveryClient 注解开启服务注册与发现功能
+
+在 coupon 的启动类上添加该注解。
+
+```java
+@MapperScan("com.atguigu.gulimall.coupon.dao")
+@SpringBootApplication
+@EnableDiscoveryClient
+public class GulimallCouponApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(GulimallCouponApplication.class, args);
+    }
+}
+```
+
+- 启动 Nacos Server
+
+根据官网下载压缩包解压后，启动 Nacos Server。
+
+1. Linux/Unix/Mac 操作系统，执行命令 `sh startup.sh -m standalone`
+2. Windows 操作系统，执行命令 `cmd startup.cmd`
+
+- 应用启动
+
+增加配置，在 coupon 模块的配置文件中添加基本配置信息
+
+```
+spring:
+  application:
+    name: gulimall-coupon
+server:
+  port: 7000
+```
+
+**注意**：如果被注册的模块没有服务名，则不会显示。
+
+- 验证
+
+访问 127.0.0.1:8848/nacos， 使用 nacos/nacos 登录。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200720235345.png)
+
+再注册一个 product 试试。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200720235556.png)
+
+服务注册成功时会提示：
+
+```
+nacos registry, gulimall-product 192.168.0.104:10000 register finished
+```
+
+- 注意：如果模块启动报错，可以尝试更换`spring cloud` 的版本。
+
+我开始使用的 `2.2.0.RELEASE`版本报错：
+
+```
+nacos Caused by: java.lang.NoClassDefFoundError: org/springframework/cloud/client/discovery/ReactiveDiscoveryClient
+```
+
+换成 `2.1.0.RELEASE`后成功。
 
 
+
+### 2、OpenFeign
 
 
 
