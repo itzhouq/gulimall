@@ -864,6 +864,8 @@ public class GulimallCouponApplication {
 
 根据官网下载压缩包解压后，启动 Nacos Server。
 
+> 官网下载太慢，可以使用这个地址：https://gitee.com/itzhouq/software
+
 1. Linux/Unix/Mac 操作系统，执行命令 `sh startup.sh -m standalone`
 2. Windows 操作系统，执行命令 `cmd startup.cmd`
 
