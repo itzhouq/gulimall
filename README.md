@@ -907,7 +907,64 @@ nacos Caused by: java.lang.NoClassDefFoundError: org/springframework/cloud/clien
 
 
 
-### 2、OpenFeign
+### 2、OpenFeign：声明式远程调用
 
+Feign 是一个声明式的 HTTP 客户端，他的目的就是让远程调用更加简单。Feign 提供了 HTTP 请求模板，通过编写简答的接口和插入注解，就可以定义好 HTTP 请求的参数、格式、地址等信息。
 
+Feign 整合了 Ribbon（负载均衡）和 Hytrix（服务熔断）,可以让我们不再需要显式地使用这两个组件。
+
+SpringCloudFeign 在 Nexflix 的基础上扩展了对 Spring MVC 注解的支持，在其实现下，我们只需要创建一个接口并采用注解的方式来配置它，即可完成对服务提供方的接口绑定。简化了 SpringCloudRibbon 自行封装服务客户调用客户端的开发量。
+
+假设会员想要从优惠券服务中获取所有的优惠券信息。我们使用这个需求尝试使用 OpenFeign。
+
+- 引入依赖
+
+首先 member 项目中已经引用了 OpenFeign：
+
+```xml
+<dependency>
+  <groupId>org.springframework.cloud</groupId>
+  <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+```
+
+这样 member 就可以调用别的服务了。
+
+- 编写测试接口
+
+首先在 coupon 中编写测试接口：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721004042.png)
+
+- 在 member 中编写远程调用接口
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721004508.png)
+
+- 开启远程调用
+
+在 member 启动类上添加注解 `@EnableFeignClients`。
+
+```java
+@EnableDiscoveryClient
+@SpringBootApplication
+@EnableFeignClients(basePackages = "com.atguigu.gulimall.member.feign")
+@MapperScan("com.atguigu.gulimall.member.dao")
+public class GulimallMemberApplication {
+	public static void main(String[] args) {
+		SpringApplication.run(GulimallMemberApplication.class, args);
+	}
+}
+```
+
+- 编写测试
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721005117.png)
+
+- 启动测试
+
+重启项目访问：http://localhost:8000/member/member/coupons
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721005336.png)
+
+成功。
 
