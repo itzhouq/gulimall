@@ -796,11 +796,177 @@ public class GulimallProductApplication {
 
 ## 五、分布式组件
 
+**Spring Cloud Alibaba 中文文档：https://github.com/alibaba/spring-cloud-alibaba/blob/master/README-zh.md**
+
+根据官网，使用之前先使用版本管理限定版本。在 common 模块中引入：
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+            <version>2.1.0.RELEASE</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
 
 
 
+### 1、Nacos
+
+官网：https://nacos.io/zh-cn/docs/quick-start.html
+
+GitHub实例：https://github.com/alibaba/spring-cloud-alibaba/blob/master/spring-cloud-alibaba-examples/nacos-example/nacos-discovery-example/readme-zh.md 。
+
+- 引入依赖 Nacos Discovery Starter
+
+在 common 中引入：
+
+```xml
+<dependency>
+     <groupId>com.alibaba.cloud</groupId>
+     <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+ </dependency>
+```
+
+- 配置 Nacos Server 的地址
+
+如果我们需要将 coupon 模块注册到注册中心，需要在 coupon 模块的配置文件中添加配置。
+
+```yml
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+```
+
+- 使用 @EnableDiscoveryClient 注解开启服务注册与发现功能
+
+在 coupon 的启动类上添加该注解。
+
+```java
+@MapperScan("com.atguigu.gulimall.coupon.dao")
+@SpringBootApplication
+@EnableDiscoveryClient
+public class GulimallCouponApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(GulimallCouponApplication.class, args);
+    }
+}
+```
+
+- 启动 Nacos Server
+
+根据官网下载压缩包解压后，启动 Nacos Server。
+
+1. Linux/Unix/Mac 操作系统，执行命令 `sh startup.sh -m standalone`
+2. Windows 操作系统，执行命令 `cmd startup.cmd`
+
+- 应用启动
+
+增加配置，在 coupon 模块的配置文件中添加基本配置信息
+
+```
+spring:
+  application:
+    name: gulimall-coupon
+server:
+  port: 7000
+```
+
+**注意**：如果被注册的模块没有服务名，则不会显示。
+
+- 验证
+
+访问 127.0.0.1:8848/nacos， 使用 nacos/nacos 登录。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200720235345.png)
+
+再注册一个 product 试试。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200720235556.png)
+
+服务注册成功时会提示：
+
+```
+nacos registry, gulimall-product 192.168.0.104:10000 register finished
+```
+
+- 注意：如果模块启动报错，可以尝试更换`spring cloud` 的版本。
+
+我开始使用的 `2.2.0.RELEASE`版本报错：
+
+```
+nacos Caused by: java.lang.NoClassDefFoundError: org/springframework/cloud/client/discovery/ReactiveDiscoveryClient
+```
+
+换成 `2.1.0.RELEASE`后成功。
 
 
 
+### 2、OpenFeign：声明式远程调用
 
+Feign 是一个声明式的 HTTP 客户端，他的目的就是让远程调用更加简单。Feign 提供了 HTTP 请求模板，通过编写简答的接口和插入注解，就可以定义好 HTTP 请求的参数、格式、地址等信息。
+
+Feign 整合了 Ribbon（负载均衡）和 Hytrix（服务熔断）,可以让我们不再需要显式地使用这两个组件。
+
+SpringCloudFeign 在 Nexflix 的基础上扩展了对 Spring MVC 注解的支持，在其实现下，我们只需要创建一个接口并采用注解的方式来配置它，即可完成对服务提供方的接口绑定。简化了 SpringCloudRibbon 自行封装服务客户调用客户端的开发量。
+
+假设会员想要从优惠券服务中获取所有的优惠券信息。我们使用这个需求尝试使用 OpenFeign。
+
+- 引入依赖
+
+首先 member 项目中已经引用了 OpenFeign：
+
+```xml
+<dependency>
+  <groupId>org.springframework.cloud</groupId>
+  <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+```
+
+这样 member 就可以调用别的服务了。
+
+- 编写测试接口
+
+首先在 coupon 中编写测试接口：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721004042.png)
+
+- 在 member 中编写远程调用接口
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721004508.png)
+
+- 开启远程调用
+
+在 member 启动类上添加注解 `@EnableFeignClients`。
+
+```java
+@EnableDiscoveryClient
+@SpringBootApplication
+@EnableFeignClients(basePackages = "com.atguigu.gulimall.member.feign")
+@MapperScan("com.atguigu.gulimall.member.dao")
+public class GulimallMemberApplication {
+	public static void main(String[] args) {
+		SpringApplication.run(GulimallMemberApplication.class, args);
+	}
+}
+```
+
+- 编写测试
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721005117.png)
+
+- 启动测试
+
+重启项目访问：http://localhost:8000/member/member/coupons
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721005336.png)
+
+成功。
 
