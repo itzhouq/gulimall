@@ -816,7 +816,7 @@ public class GulimallProductApplication {
 
 
 
-### 1、Nacos
+### 1、Nacos：注册中心
 
 官网：https://nacos.io/zh-cn/docs/quick-start.html
 
@@ -863,6 +863,8 @@ public class GulimallCouponApplication {
 - 启动 Nacos Server
 
 根据官网下载压缩包解压后，启动 Nacos Server。
+
+> 官网下载太慢，可以使用这个地址：https://gitee.com/itzhouq/software
 
 1. Linux/Unix/Mac 操作系统，执行命令 `sh startup.sh -m standalone`
 2. Windows 操作系统，执行命令 `cmd startup.cmd`
@@ -969,4 +971,184 @@ public class GulimallMemberApplication {
 ![](https://gitee.com/itzhouq/images/raw/master/notes/20200721005336.png)
 
 成功。
+
+---
+
+
+
+### 3、Nacos 作为配置中心
+
+文档：https://github.com/alibaba/spring-cloud-alibaba/blob/master/spring-cloud-alibaba-examples/nacos-example/nacos-config-example/readme-zh.md
+
+- 引入依赖
+
+各个模块都需要使用配置中心，所以在 common 模块中添加依赖：
+
+```xml
+<dependency>
+     <groupId>com.alibaba.cloud</groupId>
+     <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+ </dependency>
+```
+
+
+
+- 创建配置文件 `bootstrap.properties`
+
+选择一个模块测试，这里选择 coupon 模块。在其 `resources`文件夹下新建配置文件`bootstrap.properties`，该文件的优先级高于 `application.yml`。
+
+配置 Nacos Config 元数据：
+
+```properties
+spring.application.name=gulimall-coupon
+spring.cloud.nacos.config.server-addr=127.0.0.1:8848
+```
+
+以前我们读取配置都是通过配置文件 `application.properties`配置，然后在代码中使用`@Value`注解读取。
+
+比如：在 coupon 的 `application.properties`中添加配置：
+
+```properties
+coupon.user.name=zhangsan
+coupon.user.age=20
+```
+
+然后在代码中读取：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721205601.png)
+
+启动项目，可以读取到配置的数据。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721205641.png)
+
+但是这样的问题是，每次我们修改配置需要重启服务才能生效。这种问题在服务比较多和服务不能随便停止的项目中弊端凸显。为此需要使用配置中心。
+
+
+
+- 配置数据集
+
+当项目中引入 Nacos-Config 依赖之后，项目启动时会去配置中心加载配置，从启动信息中可以看到：
+
+```
+Located property source: CompositePropertySource {name='NACOS', propertySources=[NacosPropertySource {name='gulimall-coupon.properties'}]}
+```
+
+可以看到数据源默认是`应用名.properties`。
+
+我们去 Nacos 的控制台添加配置测试。
+
+- 添加配置
+
+在 Nacos 配置管理 --> 配置列表 --> 新增配置 中添加如下配置，重新项目，可以读取到配置。 
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721210416.png)
+
+
+
+- 动态获取配置
+
+第一次可以读取到配置，但是我们修改的配置不会再次被读取到。根据官方文档，需要在对应的 Controller 类上添加 @RefreshScope 打开动态刷新功能。再次测试可以动态刷新。
+
+
+
+#### Nacos 进阶
+
+- 命名空间
+
+主要用于配置隔离。默认新增的配置都在 public 空间。我们可以创建多个命名空间，比如 dev、prod、test等。在配置中间中对应配置。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721213520.png)
+
+```properties
+spring.cloud.nacos.config.namespace=23374e75-f3b6-420c-bd9a-9e5c4bb97ac3
+```
+
+该维度也用于不同微服务使用不同命名空间，每个微服务只读取自己命名空间下的所有配置。
+
+- 配置集
+
+一组相关或者不相关的配置项的集合称之为配置集。在系统中，一个配置文件通常就是一个配置集，包含了系统各个方面的配置。例如，一个配置集可能包含了数据源、线程池、日志级别等配置项。
+
+- 配置集 ID
+
+Data id 类似于文件名。
+
+- 配置分组
+
+默认所有的配置集都属于 DEFAULT_GROUP。
+
+对应的配置：
+
+```properties
+spring.cloud.nacos.config.group=dev
+```
+
+
+
+**本项目：每个微服务创建自己的命名空间，使用配置分组区分环境，dev、test、prod。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200721233557.png)
+
+`bootstrap.properties`的配置：
+
+```properties
+spring.application.name=gulimall-coupon
+spring.cloud.nacos.config.server-addr=127.0.0.1:8848
+
+spring.cloud.nacos.config.namespace=23374e75-f3b6-420c-bd9a-9e5c4bb97ac3
+spring.cloud.nacos.config.group=dev
+```
+
+- 同时加载多个配置集
+
+微服务任何配置信息，任何配置文件都可以放在配置中心中。
+
+只需要在 `bootstrap.properties`中说明加载配置中心的哪些配置即可
+
+以前 SpringBoot 任何从配置文件中获取值的方式都可以使用，配置中心有的配置优先使用配置中心的。
+
+下面提取`application.yml`中的所有配置到配置中心：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200722001836.png)
+
+在 `bootstrap.properties`中引入这些配置，删除 `application.yml`后，重启项目还是可以正常启动和读取配置信息。
+
+项目启动的控制台信息中可以看到读取的是哪个配置：
+
+```
+2020-07-22 00:17:51.141  INFO 7070 --- [           main] c.a.c.n.c.NacosPropertySourceBuilder     : Loading nacos data, dataId: 'datasource.yml', group: 'dev'
+2020-07-22 00:17:51.157  INFO 7070 --- [           main] c.a.c.n.c.NacosPropertySourceBuilder     : Loading nacos data, dataId: 'mybatis.yml', group: 'dev'
+2020-07-22 00:17:51.160  INFO 7070 --- [           main] c.a.c.n.c.NacosPropertySourceBuilder     : Loading nacos data, dataId: 'other.yml', group: 'dev'
+2020-07-22 00:17:51.164  INFO 7070 --- [           main] c.a.c.n.c.NacosPropertySourceBuilder     : Loading nacos data, dataId: 'gulimall-coupon.properties', group: 'dev'
+```
+
+这种配置的方式更加灵活。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
