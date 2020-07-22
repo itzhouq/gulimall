@@ -1126,27 +1126,97 @@ spring.cloud.nacos.config.group=dev
 
 
 
+### 4、Gateway
+
+官网文档：https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.2.3.RELEASE/reference/html/
+
+网关作为流量的入口，常用功能包括路由转发、权限校验、限流控制等。而SpringCloud Gateway 作为 SpringCloud官方推出的第二代网关框架，取代了 Zuul 网关。
+
+使用网关可以将一些与业务无关的功能提取出来，比如鉴权、限流、日志等。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200722214328.png)
 
 
 
+ ![](https://gitee.com/itzhouq/images/raw/master/notes/20200722215237.png)
 
 
 
+网关提供了 API 全托管服务，丰富的 API 管理功能，辅助企业管理大规模的 API，以降低管理成本和安全风险，包括协议适协议转发、安全策略、防刷、流量、监控日志等功能。
+
+Spring Cloud Gateway 旨在提供一种简单而有效的方式来对 API 进行路由，并为他们提供切面，如安全性，监控和弹性等。
 
 
 
+![](https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.2.3.RELEASE/reference/html/images/spring_cloud_gateway_diagram.png)
 
 
 
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200722220638.png)
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200722220807.png)
 
 
 
+项目中引入 Gateway。
+
+- 新建模块 gulimall-gateway
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200722222317.png)
 
 
 
+引入 Gateway 依赖，common 依赖，统一 SpringBoot 和 Spring Cloud 版本。
 
+- 开启服务注册与发现
 
+在启动类上添加 @EnableDiscoveryClient 注解。
 
+- 配置 nacos 地址和模块应用名
+
+```properties
+server.port=88
+spring.cloud.nacos.discovery.server-addr=127.0.0.1:8848
+spring.application.name=gulimall-gateway
+```
+
+- 添加配置中心文件 bootstrap
+
+```properties
+spring.application.name=gulimall-gateway
+
+spring.cloud.nacos.config.server-addr=27.0.0.1:8848
+
+spring.cloud.nacos.config.namespace=86fe8e82-b32d-4806-84c8-17c5433fafdf
+```
+
+在 nacos 中添加命名空间和配置
+
+- 启动项目
+
+- 根据文档https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.2.3.RELEASE/reference/html/#the-query-route-predicate-factory配置转发
+
+application.yml
+
+```yml
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: test_route
+          uri: https://www.baidu.com
+          predicates:
+            - Query=url, baidu
+        - id: qqq
+          uri: https://www.qq.com
+          predicates:
+            - Query=url, qq
+
+```
+
+项目启动后访问 http://localhost:88/hello?url=qq 会转发到 qq 页面。
+
+---
 
 
 
