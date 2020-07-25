@@ -1219,6 +1219,7 @@ spring:
 ---
 
 
+
 ## 六、前端基础
 
 ### 1、ES6 语法
@@ -1226,3 +1227,357 @@ spring:
 参考：https://www.cnblogs.com/itzhouq/p/12345150.html
 
 ### 2、VUE 基础
+
+#### MVVM 思想
+
+- M：即 Model ，模型，包括数据和一些基本操作
+- V：即 View ，视图，页面渲染结果
+- VM：即 View-Model ，模型和视图间的双向操作，无需开发人员干涉
+
+在 MVVM 之前，开发人员从后端获取需要的数据模型，然后要通过 DOM 操作 Model 渲染到 View 中，而后当用户操作视图，我们还需要通过 DOM获取 View 中的数据，然后同步到 Model中。
+
+而 MVVM 中的 VM 要做的事情就是把 DOM操作完全封装起来，开发人员不用关心 Model 和 View 之前要如何互相影响。
+
+#### Vue
+
+Vue (读音 /vjuː/，类似于 **view**) 是一套用于构建用户界面的**渐进式框架**。与其它大型框架不同的是，Vue 被设计为可以自底向上逐层应用。Vue 的核心库只关注视图层，不仅易于上手，还便于与第三方库或既有项目整合。另一方面，当与[现代化的工具链](https://cn.vuejs.org/v2/guide/single-file-components.html)以及各种[支持类库](https://github.com/vuejs/awesome-vue#libraries--plugins)结合使用时，Vue 也完全能够为复杂的单页应用提供驱动。
+
+官网教程：https://cn.vuejs.org/v2/guide/
+
+#### HelloWord
+
+- 安装
+
+在用 Vue 构建大型应用时推荐使用 NPM 安装[[1\]](https://cn.vuejs.org/v2/guide/installation.html#footnote-1)。NPM 能很好地和诸如 [webpack](https://webpack.js.org/) 或 [Browserify](http://browserify.org/) 模块打包器配合使用。同时 Vue 也提供配套工具来开发[单文件组件](https://cn.vuejs.org/v2/guide/single-file-components.html)。
+
+新建项目文件夹
+
+```shell
+$ npm init -y  # 初始化
+$ npm install vue   # 最新稳定版
+```
+
+在代码中引入，编写 HelloWorld 程序。
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app">
+        <h1>{{name}}, 非常帅</h1>
+    </div>
+
+    <script src="./node_modules/vue/dist/vue.js"></script>
+
+    <script>
+        let vm = new Vue({
+            el: '#app',
+            data: {
+                name: "张三"
+            }
+        })
+    </script>
+</body>
+</html>
+```
+
+
+
+#### 插件
+
+Vue 开发中浏览器插件 vue-devtools，可以方便的调试。
+
+官方地址：https://github.com/vuejs/vue-devtools
+
+Google 商店：https://chrome.google.com/webstore/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd?utm_source=chrome-ntp-icon
+
+#### 基本语法
+
+文档：https://cn.vuejs.org/v2/guide/syntax.html#Attribute
+
+- 插值表达式
+
+作用：给标签体绑定值
+
+格式：{{xxx}}
+
+说明：
+
+1. 该表达式支持 JS 语法，可以调用 JS 内置函数，但是必须有返回值，没有结果的表达式不允许使用，如：
+
+`let a = 1 + 1`
+
+2. 可以直接获取 Vue 实例中定义的数据或函数
+
+- 插值闪烁
+
+使用插值表达式在网速较慢的情况下会显示原始的 {{}}，加载完毕后才显示正常的数据，该现象称为插值闪烁。
+
+- v-text 和 v-html
+
+给属性绑定值，v-html 会渲染标签，v-text 会原样显示
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app">
+        <span v-text="msg"></span> <br>
+        <span v-html="msg"></span>
+
+        {{msg}} --- {{1 + 1}} --- {{hello()}}
+    </div>
+
+    <script src="./node_modules/vue/dist/vue.js"></script>
+
+    <script>
+        new Vue({
+            el: "#app",
+            data: {
+                msg: "<h1>Hello</h1>"
+            },
+            methods: {
+                hello() {
+                    return "World"
+                }
+            }
+        })
+    </script>
+</body>
+</html>
+```
+
+访问改页面会显示：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200725140435.png)
+
+---
+
+- v-bind
+
+作用：给属性绑定值
+
+用法：
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+    <div id="app">
+        <a v-bind:href="link">gogogo</a>
+
+        <!-- class, style -->
+        <span v-bind:class="{active: isActive, 'text-danger': hasError}">你好</span>
+    </div>
+
+    <script src="./node_modules/vue/dist/vue.js"></script>
+
+    <script>
+        let vm = new Vue({
+            el: "#app",
+            data: {
+                link: "http://baidu.com",
+                isActive: true,
+                hasError: true
+            }
+        })
+    </script>
+</body>
+</html>
+```
+
+常用在 href、class、style 等属性的绑定上。效果如下：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200725142617.png)
+
+缩写：
+
+```html
+<!-- 完整语法 -->
+<a v-bind:href="url">...</a>
+
+<!-- 缩写 -->
+<a :href="url">...</a>
+
+<!-- 动态参数的缩写 (2.6.0+) -->
+<a :[key]="url"> ... </a>
+```
+
+
+
+---
+
+
+
+#### 单向绑定和双向绑定
+
+上面几个指令都是单向绑定，页面元素改变，对应数据不一定会改变。如果需要页面元素和数据的双向绑定，需要使用 v-model 指令。
+
+- v-model
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="app">
+        精通的语言：<br>
+        <input type="checkbox" v-model='language' value="Java">Java <br>
+        <input type="checkbox" v-model='language' value="PHP">PHP <br>
+        <input type="checkbox" v-model='language' value="Python">Python <br>
+        选中了 {{language.join(',')}}
+    </div>
+    <script src="./node_modules/vue/dist/vue.js"></script>
+    <script>
+        let vm = new Vue({
+            el: "#app",
+            data: {
+                language: []
+            }
+        })
+    </script>
+</body>
+</html>
+```
+
+页面数据：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200725143347.png)
+
+---
+
+#### 指令 v-on、v-for 和 v-if
+
+- v-on 用于绑定事件，如 click 等
+
+
+
+缩写：
+
+```html
+<!-- 完整语法 -->
+<a v-on:click="doSomething">...</a>
+
+<!-- 缩写 -->
+<a @click="doSomething">...</a>
+
+<!-- 动态参数的缩写 (2.6.0+) -->
+<a @[event]="doSomething"> ... </a>
+```
+
+
+
+- v-for 用于遍历
+- v-if 用于判断
+
+
+
+#### 计算属性和侦听器
+
+文档：https://cn.vuejs.org/v2/guide/computed.html
+
+#### 组件化基础
+
+文档：https://cn.vuejs.org/v2/guide/components.html
+
+#### 生命周期和钩子函数
+
+文档：https://cn.vuejs.org/v2/guide/instance.html
+
+#### 路由
+
+文档：https://cn.vuejs.org/v2/guide/routing.html
+
+#### 使用 VUE 脚手架进行模块化开发
+
+1. 全局安装 webpack
+
+```shell
+npm install webpack -g
+```
+
+2. 全局安装 Vue 脚手架
+
+```shell
+npm install -g @vue/cli-init
+```
+
+安装提示 zsh: command not found: vue ，使用下面命令安装成功：
+
+```shell
+npm install @vue/cli -g
+```
+
+3. 初始化项目
+
+```shell
+vue init webpack appname
+```
+
+初始化过程：
+
+```shell
+➜  Desktop vue init webpack vue-demo
+
+? Project name vue-demo
+? Project description A Vue.js project
+? Author itzhouq <itzhouq@163.com>
+? Vue build standalone
+? Install vue-router? Yes
+? Use ESLint to lint your code? No
+? Set up unit tests No
+? Setup e2e tests with Nightwatch? No
+? Should we run `npm install` for you after the project has been created? (recommended) npm
+
+   vue-cli · Generated "vue-demo".
+
+
+# Installing project dependencies ...
+```
+
+
+
+4. 启动 Vue 项目
+
+```shell
+npm run dev
+```
+
+项目启动后自动打开首页。
+
+
+
+#### 整合 ElementUI 快速开发
+
+官网：https://element.eleme.cn/#/zh-CN
+
+文档：https://element.eleme.cn/#/zh-CN/component/installation
+
+
+
+
+
+----
+
+
+
