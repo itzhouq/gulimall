@@ -1404,7 +1404,7 @@ Google 商店：https://chrome.google.com/webstore/detail/vuejs-devtools/nhdogjm
 </html>
 ```
 
-常用在 href、class、style 等属性的绑定上。效果如下：
+常用在 class、style 等属性的绑定上。效果如下：
 
 ![](https://gitee.com/itzhouq/images/raw/master/notes/20200725142617.png)
 
@@ -1580,6 +1580,121 @@ npm run dev
 
 
 ----
+
+
+
+## 七、商品服务
+
+类似 coupon 模块，在 nacos 中做配置文件，保证 product 模块能正常启动。
+
+###  1、三级分类
+
+**递归树形结构获取**
+
+- 导入 SQL
+
+将资料中的数据 `/guli/docs/分布式基础篇/sql/pms_catelog.sql`导入到对应数据库中执行。
+
+- 查询商品的所有分类和子分类信息，以树形结构组装起来
+
+在 product模块的 CategoryController 中编写代码。
+
+```
+查出所有分类以及子分类，以树形结构组装起来
+```
+
+- CategoryController
+
+```java
+/**
+ * 查出所有分类以及子分类，以树形结构组装起来
+ */
+@RequestMapping("/list/tree")
+public R list() {
+  List<CategoryEntity> entities = categoryService.listWithTree();
+  return R.ok().put("data", entities);
+}
+```
+
+- CategoryServiceImpl
+
+```java
+@Override
+public List<CategoryEntity> listWithTree() {
+  // 1. 查出所有分类
+  List<CategoryEntity> entities = baseMapper.selectList(null);
+
+  // 2. 组装成父子的树形结构
+  // 2.1 找到所有的一级分类
+  List<CategoryEntity> level1Menus = entities.stream()
+    .filter(categoryEntity ->categoryEntity.getParentCid() == 0)
+    .map(menu -> {
+    // 2.2 设置子菜单
+    menu.setChildren(getChildren(menu, entities));
+    return menu;
+    // 2.3 排序
+  }).sorted(Comparator.comparingInt(menu -> (menu.getSort() == null ? 0 : menu.getSort())))
+    .collect(Collectors.toList());
+  return level1Menus;
+}
+
+/**
+ * 递归查找所有菜单的子菜单
+ */
+private List<CategoryEntity> getChildren(CategoryEntity root, List<CategoryEntity> all) {
+  List<CategoryEntity> children = all.stream().filter(categoryEntity -> {
+    return categoryEntity.getParentCid() == root.getCatId();
+  }).map(categoryEntity -> {
+    // 1. 找到子菜单
+    categoryEntity.setChildren(getChildren(categoryEntity, all));
+    return categoryEntity;
+  }).sorted(Comparator.comparingInt(menu -> (menu.getSort() == null ? 0 : menu.getSort()))).collect(Collectors.toList());
+  return children;
+}
+```
+
+- 对于 CategoryEntity 实体，添加了一个表示自菜单的属性，但是这个属性不属于数据库字段，因此需要添加注解
+
+```java
+@TableField(exist = false)
+private List<CategoryEntity> children;
+```
+
+- 测试：访问http://localhost:10000/product/category/list/tree
+
+菜单是有层级结构的。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200726012730.png)
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
