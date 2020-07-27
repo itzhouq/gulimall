@@ -1218,6 +1218,105 @@ spring:
 
 项目启动后访问 http://localhost:88/hello?url=qq 会转发到 qq 页面。
 
+#### Gateway 项目启动问题排查
+
+- 引入 的common 依赖中包含 Spring-web 的依赖，数据库的依赖，但是 Gateway 可能不会使用数据库，也就不会添加 数据库 URL 等配置信息，这时候项目会报错。解决的办法是排除 数据库的依赖：
+
+```xml
+<exclusion>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+</exclusion>
+<exclusion>
+  <groupId>com.baomidou</groupId>
+  <artifactId>mybatis-plus-boot-starter</artifactId>
+</exclusion>
+```
+
+- 还有一种解决方式是在 `@SpringBootApplication`中使用 `exclude`属性排除掉
+
+```java
+@EnableDiscoveryClient
+@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, DruidDataSourceAutoConfigure.class})
+public class GulimallGatewayApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(GulimallGatewayApplication.class, args);
+	}
+}
+```
+
+关于 Spring Boot 自动配置的原理，可以参考：https://www.cnblogs.com/niechen/p/9027804.html
+
+我在这里遇到一个问题就是，排除 `DataSourceAutoConfiguration`后，项目依然报错，查看报错信息， 看到还是加载了数据源。明明已经排除了。。。后面仔细看项目启动的初始化信息，注意到：
+
+```
+2020-07-26 12:30:42.125  INFO 9857 --- [           main] c.a.d.s.b.a.DruidDataSourceAutoConfigure : Init DruidDataSource
+```
+
+我猜测这里是数据库连接池 DruidDataSource 问题，尝试将这个也排除
+
+```java
+@EnableDiscoveryClient
+@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, DruidDataSourceAutoConfigure.class})
+public class GulimallGatewayApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(GulimallGatewayApplication.class, args);
+	}
+}
+```
+
+输入 Druid 后面就有自动提示。排除之后成功启动。
+
+- 我开始以为是 `exclude = {DataSourceAutoConfiguration.class `这个没有生效，开源码确定生效了。
+
+  - 点进 `@SpringBootApplication`的源码，该注解由三个注解组合而成
+
+  ```java
+  @SpringBootConfiguration
+  @EnableAutoConfiguration
+  @ComponentScan
+  ```
+
+  - 查看 `@EnableAutoConfiguration`
+
+  ```java
+  @AutoConfigurationPackage
+  @Import({AutoConfigurationImportSelector.class})
+  public @interface EnableAutoConfiguration {
+      String ENABLED_OVERRIDE_PROPERTY = "spring.boot.enableautoconfiguration";
+  
+      Class<?>[] exclude() default {};
+  
+      String[] excludeName() default {};
+  }
+  ```
+
+  - 这个注解 `AutoConfigurationImportSelector`是重点，其中有个方法 `exclusions` 是排除自动配置的：
+
+  ```java
+  protected AutoConfigurationImportSelector.AutoConfigurationEntry getAutoConfigurationEntry(AutoConfigurationMetadata autoConfigurationMetadata, AnnotationMetadata annotationMetadata) {
+    if (!this.isEnabled(annotationMetadata)) {
+      return EMPTY_ENTRY;
+    } else {
+      AnnotationAttributes attributes = this.getAttributes(annotationMetadata);
+      List<String> configurations = this.getCandidateConfigurations(annotationMetadata, attributes);
+      configurations = this.removeDuplicates(configurations);
+      Set<String> exclusions = this.getExclusions(annotationMetadata, attributes);
+      this.checkExcludedClasses(configurations, exclusions);
+      configurations.removeAll(exclusions);
+      configurations = this.filter(configurations, autoConfigurationMetadata);
+      this.fireAutoConfigurationImportEvents(configurations, exclusions);
+      return new AutoConfigurationImportSelector.AutoConfigurationEntry(configurations, exclusions);
+    }
+  }
+  ```
+
+  在这个地方断点，就能确定某个自动配置是否被排除。
+
+  
+
 ---
 
 
@@ -1404,7 +1503,7 @@ Google 商店：https://chrome.google.com/webstore/detail/vuejs-devtools/nhdogjm
 </html>
 ```
 
-常用在 href、class、style 等属性的绑定上。效果如下：
+常用在 class、style 等属性的绑定上。效果如下：
 
 ![](https://gitee.com/itzhouq/images/raw/master/notes/20200725142617.png)
 
@@ -1577,9 +1676,503 @@ npm run dev
 
 
 
+#### 设置 Vue 组件模板
+
+在 vscode 中首选项 --> 用户片段 --> 输入 vue 新建全局代码，输入以下模板：
+
+```
+{
+	"生成vue模板": {
+		"prefix": "vue",
+		"body": [
+			"<!-- $1 -->",
+			"<template>",
+			"<div class='$2'>$5</div>",
+			"</template>",
+			"",
+			"<script>",
+			"//这里可以导入其他文件（比如：组件，工具js，第三方插件js，json文件，图片文件等等）",
+			"//例如：import 《组件名称》 from '《组件路径》';",
+			"",
+			"export default {",
+			"//import引入的组件需要注入到对象中才能使用",
+			"components: {},",
+			"data() {",
+			"//这里存放数据",
+			"return {",
+			"",
+			"};",
+			"},",
+			"//监听属性 类似于data概念",
+			"computed: {},",
+			"//监控data中的数据变化",
+			"watch: {},",
+			"//方法集合",
+			"methods: {",
+			"",
+			"},",
+			"//生命周期 - 创建完成（可以访问当前this实例）",
+			"created() {",
+			"",
+			"},",
+			"//生命周期 - 挂载完成（可以访问DOM元素）",
+			"mounted() {",
+			"",
+			"},",
+			"beforeCreate() {}, //生命周期 - 创建之前",
+			"beforeMount() {}, //生命周期 - 挂载之前",
+			"beforeUpdate() {}, //生命周期 - 更新之前",
+			"updated() {}, //生命周期 - 更新之后",
+			"beforeDestroy() {}, //生命周期 - 销毁之前",
+			"destroyed() {}, //生命周期 - 销毁完成",
+			"activated() {}, //如果页面有keep-alive缓存功能，这个函数会触发",
+			"}",
+			"</script>",
+			"<style scoped>",
+			"$4",
+			"</style>"
+		],
+		"description": "生成vue模板"
+	}
+}
+```
+
+使用时直接输入 vue 即可。
+
 
 
 ----
 
 
+
+## 七、商品服务
+
+类似 coupon 模块，在 nacos 中做配置文件，保证 product 模块能正常启动。
+
+###  1、三级分类
+
+#### 1）递归树形结构获取
+
+- 导入 SQL
+
+将资料中的数据 `/guli/docs/分布式基础篇/sql/pms_catelog.sql`导入到对应数据库中执行。
+
+- 查询商品的所有分类和子分类信息，以树形结构组装起来
+
+在 product模块的 CategoryController 中编写代码。
+
+```
+查出所有分类以及子分类，以树形结构组装起来
+```
+
+- CategoryController
+
+```java
+/**
+ * 查出所有分类以及子分类，以树形结构组装起来
+ */
+@RequestMapping("/list/tree")
+public R list() {
+  List<CategoryEntity> entities = categoryService.listWithTree();
+  return R.ok().put("data", entities);
+}
+```
+
+- CategoryServiceImpl
+
+```java
+@Override
+public List<CategoryEntity> listWithTree() {
+  // 1. 查出所有分类
+  List<CategoryEntity> entities = baseMapper.selectList(null);
+
+  // 2. 组装成父子的树形结构
+  // 2.1 找到所有的一级分类
+  List<CategoryEntity> level1Menus = entities.stream()
+    .filter(categoryEntity ->categoryEntity.getParentCid() == 0)
+    .map(menu -> {
+    // 2.2 设置子菜单
+    menu.setChildren(getChildren(menu, entities));
+    return menu;
+    // 2.3 排序
+  }).sorted(Comparator.comparingInt(menu -> (menu.getSort() == null ? 0 : menu.getSort())))
+    .collect(Collectors.toList());
+  return level1Menus;
+}
+
+/**
+ * 递归查找所有菜单的子菜单
+ */
+private List<CategoryEntity> getChildren(CategoryEntity root, List<CategoryEntity> all) {
+  List<CategoryEntity> children = all.stream().filter(categoryEntity -> 
+    categoryEntity.getParentCid() == root.getCatId()
+  ).map(categoryEntity -> {
+    // 1. 找到子菜单
+    categoryEntity.setChildren(getChildren(categoryEntity, all));
+    return categoryEntity;
+  }).sorted(Comparator.comparingInt(menu -> (menu.getSort() == null ? 0 : menu.getSort()))).collect(Collectors.toList());
+  return children;
+}
+```
+
+- 对于 CategoryEntity 实体，添加了一个表示自菜单的属性，但是这个属性不属于数据库字段，因此需要添加注解
+
+```java
+@TableField(exist = false)
+private List<CategoryEntity> children;
+```
+
+- 测试：访问http://localhost:10000/product/category/list/tree
+
+菜单是有层级结构的。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200726012730.png)
+
+---
+
+
+
+#### 2）配置网关路由和路径重写
+
+开始编写后端管理系统的前端项目，维护三级分类的增删改查。
+
+使用 vscode 打开 renren-fast-vue，启动后台服务 renren-fast。
+
+前端使用 `npm run dev`启动。访问系统后，在菜单管理中手动添加“商品系统”的一级菜单。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200726090248.png)
+
+添加“分类”子菜单：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200726090514.png)
+
+现在需要在分类维护标签中显示三级分类信息。观察页面路由规则，路由 `sys/role`会被解析成 `sys-role`存在数据库中。页面的请求路径是 `http://localhost:8001/#/sys-role`。前端对应的机制是在对应目录`src/views/modules/sys`下的一个组件`role.vue`。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200726091210.png)
+
+我们安装该机制编写，在modules 下新建文件夹product，新建组件category.vue。
+
+根据 ElementUI 的树形组件编写树形菜单：https://element.eleme.cn/#/zh-CN/component/tree
+
+```vue
+<template>
+  <el-tree :data="data" :props="defaultProps" @node-click="handleNodeClick"></el-tree>
+</template>
+
+<script>
+//这里可以导入其他文件（比如：组件，工具js，第三方插件js，json文件，图片文件等等）
+//例如：import 《组件名称》 from '《组件路径》';
+
+export default {
+  //import引入的组件需要注入到对象中才能使用
+  components: {},
+  data() {
+    return {
+      data: [],
+      defaultProps: {
+        children: "children",
+        label: "label",
+      },
+    };
+  },
+  methods: {
+    handleNodeClick(data) {
+      console.log(data);
+    },
+    getMenus() {
+        this.$http({
+          url: this.$http.adornUrl('/product/category/list/tree'),
+          method: 'get'
+        }).then(data => {
+          console.log('成功获取到数据', data)
+        })
+    }
+  },
+  //监听属性 类似于data概念
+  computed: {},
+  //监控data中的数据变化
+  watch: {},
+  //生命周期 - 创建完成（可以访问当前this实例）
+  created() {
+      this.getMenus();
+  },
+  //生命周期 - 挂载完成（可以访问DOM元素）
+  mounted() {},
+  beforeCreate() {}, //生命周期 - 创建之前
+  beforeMount() {}, //生命周期 - 挂载之前
+  beforeUpdate() {}, //生命周期 - 更新之前
+  updated() {}, //生命周期 - 更新之后
+  beforeDestroy() {}, //生命周期 - 销毁之前
+  destroyed() {}, //生命周期 - 销毁完成
+  activated() {}, //如果页面有keep-alive缓存功能，这个函数会触发
+};
+</script>
+<style scoped>
+</style>
+```
+
+保存访问，出现路径不一致问题，我们需要修改前面的基本路径。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200726093602.png)
+
+在前端项目中搜索基本路径可以定位到 `static/config/index.js`文件。
+
+将该路径修改为网关地址：
+
+```JavaScript
+// api接口请求地址
+window.SITE_CONFIG['baseUrl'] = 'http://localhost:8080/renren-fast';
+```
+
+```JavaScript
+// api接口请求地址
+window.SITE_CONFIG['baseUrl'] = 'http://localhost:88';
+```
+
+刷新页面需要重新登录，但是验证码的请求失败，原来是请求的路径不对，请求应该是到达后台系统renren-fast而不是网关。
+
+```
+Request URL: http://localhost:88/captcha.jpg?uuid=05ffa49a-adbe-4c3f-8e81-3a2bfd816701
+```
+
+现在需要网关将这个请求发送到 renren-fast 服务，所以需要将 renren-fast 服务注册到注册中心 nacos 中。
+
+引入 common、配置应用名、配置注册中心地址、开启服务注册发现功能。
+
+- 网关配置处理请求
+
+使用 **断言Predicate**处理请求路径。根据 Spring Cloud Gateway 的 文档配置：[The Path Route Predicate Factory](https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.2.3.RELEASE/reference/html/#the-path-route-predicate-factory)
+
+定义一个规则，只要前端请求，都带上`/api`的前缀，同时修改`static/config/index.js`文件:
+
+```javascript
+  // api接口请求地址
+  window.SITE_CONFIG['baseUrl'] = 'http://localhost:88/api';
+```
+
+修改网关的配置文件：
+
+```yml
+- id: admin_route
+uri: lb://renren-fast     ## load-balance 负载均衡
+predicates:
+- Path=/api/**
+```
+
+重启网关和后台系统，验证码依然不可用，查看路径是：
+
+```
+http://localhost:88/captcha.jpg?uuid=cc53c398-ddb0-41fa-8c38-58c0bf94ed41
+```
+
+丢失了应用名：
+
+```
+http://localhost:88/renren-fast/captcha.jpg?uuid=cc53c398-ddb0-41fa-8c38-58c0bf94ed41
+```
+
+这个时候需要使用 Gateway 的 Filter 路径重写功能。
+
+过滤器GatewayFilter：[ The `RewritePath` `GatewayFilter` Factory](https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.2.3.RELEASE/reference/html/#the-rewritepath-gatewayfilter-factory)
+
+```yml
+        - id: admin_route
+          uri: lb://renren-fast     ## load-balance 负载均衡
+          predicates:
+            - Path=/api/**
+          filters:
+            - RewritePath=/api/(?<segment>/?.*), /renren-fast/$\{segment}
+
+## 前端项目， /api
+## http://localhost:88/api/captcha.jpg  http://localhost:8080/captcha.jpg
+```
+
+**注意**：如果出现 503 报错，很有可能是 Gateway 中没有被引入 nacos 依赖，没有注入到注册中心。
+
+重启项目之后可以加载验证码了，但是登录报错。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200726143824.png)
+
+跨域问题。
+
+#### 3）网关统一配置跨域
+
+关于跨域：https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Access_control_CORS
+
+跨域解决：
+
+ - 方式一：使用 nginx 部署为统一域
+
+ - 配置当次请求允许跨域，添加响应头
+
+   - `Access-Controller-Allow-Origin`：支持哪些来源的请求跨域
+   - `Access-Control-Allow-Methods`：支持哪些方法跨域
+   - `Access-Control-Allow-Credentials`：跨域请求默认不包含 cookie，设置为 true 可以包含
+   - `Access-Control-Expose-Header`：跨域请求暴露的字段
+
+   CORS 请求时，XMLHttpRequest 对象的 getResponseHeader() 方法只能拿到 6 个基本字段：Cache-Control、Control-Language、Content-Type、Expires、Last-Modified、Paragma。如果想要拿到其他字段，就必须在 Access-Control-Expose-Headers 里面指定。
+
+   - `Access-Control-Max-Age`：表明该响应的有效时间为多少秒，在有效时间内，浏览器无需为同一请求再次发送预检请求。
+
+在 Gateway 中编写过滤器统一处理跨域问题。
+
+```java
+package com.atguigu.gulimall.gateway.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsWebFilter;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
+
+/**
+ * 跨域处理过滤器
+ */
+@Configuration
+public class GulimallCorsConfiguration {
+
+    @Bean
+    public CorsWebFilter corsWebFilter() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration corsConfiguration = new CorsConfiguration();
+
+        // 配置跨域
+        corsConfiguration.addAllowedHeader("*");
+        corsConfiguration.addAllowedMethod("*");
+        corsConfiguration.addAllowedOrigin("*");
+        corsConfiguration.setAllowCredentials(true);
+
+        source.registerCorsConfiguration("/**", corsConfiguration);
+        return new CorsWebFilter(source);
+    }
+}
+```
+
+重启项目 Gateway 和 renren-fast，出现报错信息：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200726151127.png)
+
+意思是 Access-Control-Allow-Origin 有多个值。再看响应头信息：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200726151241.png)
+
+也是有多个。猜测可能是项目中配置了两次跨域，但是整个项目只有renren-fast 不是自己编写的，里面可能已经存在跨域配置，注释掉重启项目即可解决该问题。
+
+---
+
+#### 4) 树形展示三级分类数据
+
+- 后台服务路由
+
+跨域问题虽然解决了，但是三级分类的请求还是 404 。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200727234022.png)
+
+这个时候请求 `http://localhost:88/api/product/category/list/tree`会被转发到 renren-fast，而不是我们想要的 product。所以需要修改 Gateway 路由设置。
+
+在 gateway 的配置文件 `application.yml` 中添加配置:
+
+```yml
+- id: product_route
+uri: lb://gulimall-product     ## load-balance 负载均衡
+predicates:
+- Path=/api/product/**
+filters:
+- RewritePath=/api/(?<segment>/?.*), /$\{segment}
+
+- id: admin_route
+uri: lb://renren-fast     ## load-balance 负载均衡
+predicates:
+- Path=/api/**
+filters:
+- RewritePath=/api/(?<segment>/?.*), /renren-fast/$\{segment}
+```
+
+注意将精细的路由写在上面优先匹配。
+
+配置好 product 服务。重启 Gateway、renren-fast、product 服务，尝试请求：
+
+`http://localhost:10000/product/category/list/tree`能拿到数据说明后台服务之间通信是流畅的。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200728000922.png)
+
+---
+
+- 前端数据获取展示
+
+前端获取的数据在 data.data 中，使用解构表达式解构到 data 中：
+
+```JavaScript
+getMenus() {
+  this.$http({
+    url: this.$http.adornUrl("/product/category/list/tree"),
+    method: "get"
+  }).then(({data}) => {
+    console.log("成功获取到菜单数据", data.data);
+    this.menus = data.data;
+  });
+}
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200728001521.png)
+
+菜单中要展示的菜单名称和子菜单属性名可以看参考文档https://element.eleme.cn/#/zh-CN/component/tree，这里的菜单名和子菜单属性名分别为 `name` 和 `children`。
+
+
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200728002147.png)
+
+vue 代码：category.vue 文件
+
+```javascript
+<template>
+  <el-tree :data="menus" :props="defaultProps" @node-click="handleNodeClick"></el-tree>
+</template>
+
+<script>
+export default {
+  components: {},
+  data() {
+    return {
+      menus: [],
+      defaultProps: {
+        children: "children",
+        label: "name",
+      },
+    };
+  },
+  computed: {},
+  watch: {},
+  methods: {
+    getMenus() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/list/tree"),
+        method: "get"
+      }).then(({data}) => {
+          console.log("成功获取到菜单数据", data.data);
+          this.menus = data.data;
+      });
+    }
+  },
+  created() {
+      this.getMenus();
+  },
+  mounted() {},
+  beforeCreate() {},
+  beforeMount() {},
+  beforeUpdate() {},
+  updated() {},
+  beforeDestroy() {},
+  destroyed() {},
+  activated() {},
+};
+</script>
+<style scoped>
+</style>
+```
+
+页面效果：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200728002328.png)
+
+---
 
