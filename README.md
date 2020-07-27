@@ -2003,10 +2003,10 @@ http://localhost:88/renren-fast/captcha.jpg?uuid=cc53c398-ddb0-41fa-8c38-58c0bf9
 
  - 配置当次请求允许跨域，添加响应头
 
-    - `Access-Controller-Allow-Origin`：支持哪些来源的请求跨域
-    - `Access-Control-Allow-Methods`：支持哪些方法跨域
-    - `Access-Control-Allow-Credentials`：跨域请求默认不包含 cookie，设置为 true 可以包含
-    - `Access-Control-Expose-Header`：跨域请求暴露的字段
+   - `Access-Controller-Allow-Origin`：支持哪些来源的请求跨域
+   - `Access-Control-Allow-Methods`：支持哪些方法跨域
+   - `Access-Control-Allow-Credentials`：跨域请求默认不包含 cookie，设置为 true 可以包含
+   - `Access-Control-Expose-Header`：跨域请求暴露的字段
 
    CORS 请求时，XMLHttpRequest 对象的 getResponseHeader() 方法只能拿到 6 个基本字段：Cache-Control、Control-Language、Content-Type、Expires、Last-Modified、Paragma。如果想要拿到其他字段，就必须在 Access-Control-Expose-Headers 里面指定。
 
@@ -2058,4 +2058,119 @@ public class GulimallCorsConfiguration {
 ---
 
 #### 4) 树形展示三级分类数据
+
+- 后台服务路由
+
+跨域问题虽然解决了，但是三级分类的请求还是 404 。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200727234022.png)
+
+这个时候请求 `http://localhost:88/api/product/category/list/tree`会被转发到 renren-fast，而不是我们想要的 product。所以需要修改 Gateway 路由设置。
+
+在 gateway 的配置文件 `application.yml` 中添加配置:
+
+```yml
+- id: product_route
+uri: lb://gulimall-product     ## load-balance 负载均衡
+predicates:
+- Path=/api/product/**
+filters:
+- RewritePath=/api/(?<segment>/?.*), /$\{segment}
+
+- id: admin_route
+uri: lb://renren-fast     ## load-balance 负载均衡
+predicates:
+- Path=/api/**
+filters:
+- RewritePath=/api/(?<segment>/?.*), /renren-fast/$\{segment}
+```
+
+注意将精细的路由写在上面优先匹配。
+
+配置好 product 服务。重启 Gateway、renren-fast、product 服务，尝试请求：
+
+`http://localhost:10000/product/category/list/tree`能拿到数据说明后台服务之间通信是流畅的。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200728000922.png)
+
+---
+
+- 前端数据获取展示
+
+前端获取的数据在 data.data 中，使用解构表达式解构到 data 中：
+
+```JavaScript
+getMenus() {
+  this.$http({
+    url: this.$http.adornUrl("/product/category/list/tree"),
+    method: "get"
+  }).then(({data}) => {
+    console.log("成功获取到菜单数据", data.data);
+    this.menus = data.data;
+  });
+}
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200728001521.png)
+
+菜单中要展示的菜单名称和子菜单属性名可以看参考文档https://element.eleme.cn/#/zh-CN/component/tree，这里的菜单名和子菜单属性名分别为 `name` 和 `children`。
+
+
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200728002147.png)
+
+vue 代码：category.vue 文件
+
+```javascript
+<template>
+  <el-tree :data="menus" :props="defaultProps" @node-click="handleNodeClick"></el-tree>
+</template>
+
+<script>
+export default {
+  components: {},
+  data() {
+    return {
+      menus: [],
+      defaultProps: {
+        children: "children",
+        label: "name",
+      },
+    };
+  },
+  computed: {},
+  watch: {},
+  methods: {
+    getMenus() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/list/tree"),
+        method: "get"
+      }).then(({data}) => {
+          console.log("成功获取到菜单数据", data.data);
+          this.menus = data.data;
+      });
+    }
+  },
+  created() {
+      this.getMenus();
+  },
+  mounted() {},
+  beforeCreate() {},
+  beforeMount() {},
+  beforeUpdate() {},
+  updated() {},
+  beforeDestroy() {},
+  destroyed() {},
+  activated() {},
+};
+</script>
+<style scoped>
+</style>
+```
+
+页面效果：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200728002328.png)
+
+---
 
