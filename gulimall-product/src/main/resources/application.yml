@@ -19,6 +19,14 @@
 #  global-config:
 #    db-config:
 #      id-type: auto  # 配置主键生成规则
-#
+#      logic-delete-value: 1
+#      logic-not-delete-value: 0
+
 #server:
 #  port: 10000
+#logging:
+#  level:
+#    com.atguigu.gulimall: debug
+
+
+
