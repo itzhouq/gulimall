@@ -755,6 +755,7 @@ npm run dev
  `product`模块中新建 `application.yml`。配置数据源和mappers文件位置、主键生成策略。
 
 ```yml
+
 spring:
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
@@ -1116,6 +1117,7 @@ spring.cloud.nacos.config.group=dev
 项目启动的控制台信息中可以看到读取的是哪个配置：
 
 ```
+
 2020-07-22 00:17:51.141  INFO 7070 --- [           main] c.a.c.n.c.NacosPropertySourceBuilder     : Loading nacos data, dataId: 'datasource.yml', group: 'dev'
 2020-07-22 00:17:51.157  INFO 7070 --- [           main] c.a.c.n.c.NacosPropertySourceBuilder     : Loading nacos data, dataId: 'mybatis.yml', group: 'dev'
 2020-07-22 00:17:51.160  INFO 7070 --- [           main] c.a.c.n.c.NacosPropertySourceBuilder     : Loading nacos data, dataId: 'other.yml', group: 'dev'
@@ -2005,10 +2007,10 @@ http://localhost:88/renren-fast/captcha.jpg?uuid=cc53c398-ddb0-41fa-8c38-58c0bf9
 
  - 配置当次请求允许跨域，添加响应头
 
-   - `Access-Controller-Allow-Origin`：支持哪些来源的请求跨域
-   - `Access-Control-Allow-Methods`：支持哪些方法跨域
-   - `Access-Control-Allow-Credentials`：跨域请求默认不包含 cookie，设置为 true 可以包含
-   - `Access-Control-Expose-Header`：跨域请求暴露的字段
+    - `Access-Controller-Allow-Origin`：支持哪些来源的请求跨域
+    - `Access-Control-Allow-Methods`：支持哪些方法跨域
+    - `Access-Control-Allow-Credentials`：跨域请求默认不包含 cookie，设置为 true 可以包含
+    - `Access-Control-Expose-Header`：跨域请求暴露的字段
 
    CORS 请求时，XMLHttpRequest 对象的 getResponseHeader() 方法只能拿到 6 个基本字段：Cache-Control、Control-Language、Content-Type、Expires、Last-Modified、Paragma。如果想要拿到其他字段，就必须在 Access-Control-Expose-Headers 里面指定。
 
@@ -2324,8 +2326,573 @@ Preparing: UPDATE pms_category SET show_status=0 WHERE cat_id IN ( ? ) AND show_
 
 ---
 
+#### 7) 删除效果细化
+
+在 category.vue 组件中发送请求删除菜单。
+
+发送请求的方式参考 role.vue ，发送 get 和 post 请求的代码都是模板代码，添加到代码片段中。
+
+```javascript
+"http-get请求": {
+  "prefix": "httpget",
+    "body": [
+      "this.\\$http({",
+      "url: this.\\$http.adornUrl(''),",
+      "method: 'get',",
+      "params: this.\\$http.adornParams({})",
+      "}).then(({ data }) = {",
+      "})"
+    ],
+      "description": "httpGET请求"
+},
+  "http-post请求": {
+    "prefix": "httppost",
+      "body": [
+        "this.\\$http({",
+        "url: this.\\$http.adornUrl(''),",
+        "method: 'post',",
+        "data: this.\\$http.adornData(data, false)",
+        "}).then(({ data }) => { }); "
+      ],
+        "description": "httpPOST请求"
+  }
+```
+
+在 remove 方法中编写发送请求的逻辑和请求成功后的效果：
+
+```vue
+<template>
+  <el-tree
+    :data="menus"
+    :props="defaultProps"
+    :expand-on-click-node="false"
+    show-checkbox
+    node-key="catId"
+    :default-expanded-keys="expandedKey"
+  >
+    <span class="custom-tree-node" slot-scope="{ node, data }">
+      <span>{{ node.label }}</span>
+      <span>
+        <el-button
+          v-if="node.level <= 2"
+          type="text"
+          size="mini"
+          @click="() => append(node, data)"
+        >Append</el-button>
+        <el-button
+          v-if="node.childNodes.length == 0"
+          type="text"
+          size="mini"
+          @click="() => remove(node, data)"
+        >Delete</el-button>
+      </span>
+    </span>
+  </el-tree>
+</template>
+
+<script>
+export default {
+  components: {},
+  data() {
+    return {
+      menus: [],
+      expandedKey: [],
+      defaultProps: {
+        children: "children",
+        label: "name",
+      },
+    };
+  },
+  computed: {},
+  watch: {},
+  methods: {
+    getMenus() {
+      this.$http({
+        url: this.$http.adornUrl("/product/category/list/tree"),
+        method: "get",
+      }).then(({ data }) => {
+        console.log("成功获取到菜单数据", data.data);
+        this.menus = data.data;
+      });
+    },
+    append(node, data) {
+      console.log("append", node, data);
+    },
+    remove(node, data) {
+      var ids = [data.catId];
+      this.$confirm(`是否删除【${data.name}】菜单？`, "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(() => {
+          this.$http({
+            url: this.$http.adornUrl("/product/category/delete"),
+            method: "post",
+            data: this.$http.adornData(ids, false),
+          }).then(({ data }) => {
+            this.$message({
+              message: "菜单删除成功",
+              type: "success",
+            });
+            // 刷新出新的菜单
+            this.getMenus();
+            // 设置需要默认展开的菜单
+            this.expandedKey = [node.parent.data.catId]
+          });
+        })
+        .catch(() => {});
+      console.log("remove", node, data);
+    },
+  },
+  created() {
+    this.getMenus();
+  },
+  mounted() {},
+  beforeCreate() {},
+  beforeMount() {},
+  beforeUpdate() {},
+  updated() {},
+  beforeDestroy() {},
+  destroyed() {},
+  activated() {},
+};
+</script>
+<style scoped>
+</style>
+```
+
+- 请求成功后需要刷新菜单：再次调用 `this.menus()` 方法。
+- 删除成功后需要展开被删除菜单的父菜单：参考官网绑定 `default-expanded-keys` 属性。
+- 确认删除和删除后的提示弹窗也是参考官网文档。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200801111515.png)
 
 
+
+---
+
+#### 8) 新增菜单
+
+点击 Append 添加菜单需要Dialog 对话框组件，参考官方文档。
+
+```vue
+<el-dialog title="提示" :visible.sync="dialogVisible" width="30%">
+  <el-form :model="category">
+    <el-form-item label="分类名称">
+      <el-input v-model="category.name" autocomplete="off"></el-input>
+    </el-form-item>
+  </el-form>
+
+  <span slot="footer" class="dialog-footer">
+    <el-button @click="dialogVisible = false">取 消</el-button>
+    <el-button type="primary" @click="addCategory">确 定</el-button>
+  </span>
+</el-dialog>
+```
+
+添加菜单的方法：
+
+```javascript
+// 添加的三级分类
+addCategory() {
+  console.log("添加的三级分类数据", this.category);
+  this.$http({
+    url: this.$http.adornUrl("/product/category/save"),
+    method: "post",
+    data: this.$http.adornData(this.category, false),
+  }).then(({ data }) => {
+    this.$message({
+      message: "菜单保存成功",
+      type: "success",
+    });
+    // 关闭对话框
+    this.dialogVisible = false;
+    // 刷新出新的菜单
+    this.getMenus();
+    // 设置需要默认展开的菜单
+    this.expandedKey = [this.category.parentCid];
+  });
+}
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200801133952.png)
+
+---
+
+#### 9）修改菜单
+
+- Append 按钮后添加 Edit 按钮
+- 数据修改之前发送请求得到节点最新数据
+- 添加图标和计量单位两个文本框
+- 发送修改请求，请求结束后清除 dialog 中的值，关闭对话框，刷新菜单。
+
+关键代码：
+
+```javascript
+<template>
+  <div>
+    <el-tree
+      :data="menus"
+      :props="defaultProps"
+      :expand-on-click-node="false"
+      show-checkbox
+      node-key="catId"
+      :default-expanded-keys="expandedKey"
+    >
+      <span class="custom-tree-node" slot-scope="{ node, data }">
+        <span>{{ node.label }}</span>
+        <span>
+          <el-button
+            v-if="node.level <= 2"
+            type="text"
+            size="mini"
+            @click="() => append(node, data)"
+          >Append</el-button>
+          <el-button type="text" size="mini" @click="edit(data)">Edit</el-button>
+          <el-button
+            v-if="node.childNodes.length == 0"
+            type="text"
+            size="mini"
+            @click="() => remove(node, data)"
+          >Delete</el-button>
+        </span>
+      </span>
+    </el-tree>
+
+    <el-dialog :title="title" :visible.sync="dialogVisible" width="30%" :close-on-click-modal="false">
+      <el-form :model="category">
+        <el-form-item label="分类名称">
+          <el-input v-model="category.name" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="图标">
+          <el-input v-model="category.icon" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="计量单位">
+          <el-input v-model="category.productUnit" autocomplete="off"></el-input>
+        </el-form-item>
+      </el-form>
+
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="submitData()">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+export default {
+  components: {},
+  data() {
+    return {
+      menus: [],
+      title: "",
+      dialogType: "", // add edit
+      category: {
+        name: "",
+        parentCid: 0,
+        catLevel: 0,
+        showStatus: 1,
+        sort: 1,
+        productUnit: "",
+        icon: "",
+        catId: null,
+      },
+      dialogVisible: false,
+      expandedKey: [],
+      defaultProps: {
+        children: "children",
+        label: "name",
+      },
+    };
+  },
+  methods: 
+    submitData() {
+      if (this.dialogType == "add") {
+        this.addCategory();
+      }
+      if (this.dialogType == "edit") {
+        this.editCategory();
+      }
+    },
+    // 修改三级分类数据
+    editCategory() {
+      var {catId, name, icon, productUnit} = this.category;
+      this.$http({
+        url: this.$http.adornUrl("/product/category/update"),
+        method: "post",
+        data: this.$http.adornData({catId, name, icon, productUnit}, false),
+      }).then(({ data }) => {
+        this.$message({
+          message: "菜单修改成功",
+          type: "success",
+        });
+        // 关闭对话框
+        this.dialogVisible = false;
+        // 刷新出新的菜单
+        this.getMenus();
+        // 设置需要默认展开的菜单
+        this.expandedKey = [this.category.parentCid];
+      });
+    },
+    edit(data) {
+      console.log("要修改的数据： ", data);
+      this.dialogVisible = true;
+      this.dialogType = "edit";
+      this.title = "修改分类";
+      // 发送请求获取当前节点最新的数据
+      this.$http({
+        url: this.$http.adornUrl(`/product/category/info/${data.catId}`),
+        method: "get",
+      }).then(({ data }) => {
+        // 请求成功
+        console.log("要回显的数据", data);
+        this.category.name = data.category.name;
+        this.category.catId = data.category.catId;
+        this.category.icon = data.category.icon;
+        this.category.productUnit = data.category.productUnit;
+        this.category.parentCid = data.category.parentCid;
+      });
+    },
+    // 添加的三级分类
+    addCategory() {
+      console.log("添加的三级分类数据", this.category);
+      this.$http({
+        url: this.$http.adornUrl("/product/category/save"),
+        method: "post",
+        data: this.$http.adornData(this.category, false),
+      }).then(({ data }) => {
+        this.$message({
+          message: "菜单保存成功",
+          type: "success",
+        });
+        // 关闭对话框
+        this.dialogVisible = false;
+        // 刷新出新的菜单
+        this.getMenus();
+        // 设置需要默认展开的菜单
+        this.expandedKey = [this.category.parentCid];
+      });
+    },
+    append(node, data) {
+      console.log("append", node, data);
+      this.dialogType = "add";
+      this.title = "添加分类";
+      this.dialogVisible = true;
+      this.category.parentCid = data.catId;
+      this.category.catLevel = data.catLevel * 1 + 1;
+        this.category.name = "";
+        this.category.catId = null;
+        this.category.icon = "";
+        this.category.productUnit = "";
+        this.category.sort = 0;
+        this.category.showStatus = 1;
+    }
+  }
+};
+```
+
+---
+
+#### 10)  修改菜单-拖拽功能
+
+参考 Tree 树形控件可拖拽节点的文档。
+
+添加属性：
+
+- draggable：是否开启拖拽节点功能
+- allow-drop：拖拽时判定目标节点能否被放置。`type` 参数有三种情况：'prev'、'inner' 和 'next'，分别表示放置在目标节点前、插入至目标节点和放置在目标节点后。
+
+`Function(draggingNode, dropNode, type)`。
+
+- 拖拽判断
+  - 被拖动的当前节点以及所在父节点总层数不能大于3
+  - 编写一个计算被拖拽的当前节点的总层数的函数
+
+关键代码：
+
+```JavaScript
+allowDrop(draggingNode, dropNode, type) {
+  // 1. 被拖动的当前节点以及所在父节点总层数不能大于3
+  // 1）被拖动的当前节点的总层数
+  console.log("allowDrop: ", draggingNode, dropNode, type);
+  this.countNodeLevel(draggingNode.data);
+  // 当前正在拖动的节点 + 父节点所在的深度不大于3即可
+  let deep = (this.maxLevel - draggingNode.data.catLevel) + 1;
+  console.log("深度：", deep);
+
+  if(type == "inner") {
+    return (deep + dropNode.level) <= 3;
+  } else {
+    return (deep + dropNode.parent.level) <= 3;
+  }
+},
+  countNodeLevel(node) {
+    // 找到所有子节点，求出最大深度
+    if (node.children != null && node.children.length > 0) {
+      for (let i = 0; i < node.children.length; i++) {
+        if (node.children[i].catLevel > this.maxLevel) {
+          this.maxLevel = node.children[i].catLevel;
+        }
+        this.countNodeLevel(node.children[i]);
+      }
+    }
+  },
+```
+
+---
+
+#### 11）修改菜单-拖拽功能完成
+
+菜单拖拽会影响父Id，层级，和排序。为了拿到这些数据，我们需要监听菜单拖拽成功事件。
+
+参考文档得到需要监听的事件：
+
+- node-drop：拖拽成功完成时触发的事件。共四个参数，依次为：被拖拽节点对应的 Node、结束拖拽时最后进入的节点、被拖拽节点的放置位置（before、after、inner）、event。
+- 需要收集的数据主要有：
+  - 获取节点最新的父节点Id
+  -  当前拖拽节点的最新顺序
+  - 当前拖拽节点的最新层级
+
+关键代码：
+
+```JavaScript
+handleDrop(draggingNode, dropNode, dropType, ev) {
+  console.log("handleDrop: ", draggingNode, dropNode, dropType);
+
+  // 1. 获取节点最新的父节点Id
+  let pCid = 0; // 父节点的catId
+  let siblings = null; // 新位置的兄弟节点的集合
+  if (dropType == "before" || dropType == "after") {
+    pCid =
+      dropNode.parent.data.catId == undefined
+      ? 0
+    : dropNode.parent.data.catId;
+    siblings = dropNode.parent.childNodes;
+  } else {
+    pCid = dropNode.data.catId;
+    siblings = dropNode.childNodes;
+  }
+
+  // 2. 当前拖拽节点的最新顺序
+  for (let i = 0; i < siblings.length; i++) {
+    if (siblings[i].data.catId == draggingNode.data.catId) {
+      // 如果遍历的是当前正在拖拽的节点
+      let catLevel = draggingNode.level;
+      if (siblings[i].level != draggingNode.level) {
+        // 当前节点的层级发生变化
+        catLevel = siblings[i].level;
+        // 修改子节点的层级
+        this.updateChildNodeLevel(siblings[i]);
+      }
+      this.updateNodes.push({
+        catId: siblings[i].data.catId,
+        sort: i,
+        parentCid: pCid,
+        catLevel: catLevel,
+      });
+    } else {
+      this.updateNodes.push({ catId: siblings[i].data.catId, sort: i });
+    }
+  }
+
+  // 3. 当前拖拽节点的最新层级
+  console.log("updateNodes: ", this.updateNodes);
+  this.$http({
+    url: this.$http.adornUrl("/product/category/update/sort"),
+    method: "post",
+    data: this.$http.adornData(this.updateNodes, false),
+  }).then(({ data }) => {
+    this.$message({
+      message: "菜顺序单修改成功",
+      type: "success",
+    });
+    // 刷新出新的菜单
+    this.getMenus();
+    // 设置需要默认展开的菜单
+    this.expandedKey = [pCid];
+    this.updateNodes = [];
+    this.maxLevel = 0;
+  });
+},
+  updateChildNodeLevel(node) {
+    if (node.childNodes.length > 0) {
+      for (let i = 0; node.childNodes.length; i++) {
+        var cNode = node.childNodes[i].data;
+        this.updateNodes.push({
+          catId: cNode.catId,
+          catLevel: node.childNodes[i].level,
+        });
+        this.updateChildNodeLevel(node.childNodes[i]);
+      }
+    }
+  }
+```
+
+后台添加批量修改的接口：
+
+```java
+/**
+ * 批量修改
+ */
+@RequestMapping("/update/sort")
+public R updatSort(@RequestBody CategoryEntity[] category){
+  categoryService.updateBatchById(Arrays.asList(category));
+  return R.ok();
+}
+```
+
+---
+
+#### 12) 拖动优化
+
+#### 13）批量删除
+
+参考文档，添加批量删除的按钮。
+
+```vue
+<el-button type="danger">危险按钮</el-button>
+```
+
+参考 tree 组件的文档，获取被选中的节点。
+
+- getCheckedNodes：若节点可被选择（即 `show-checkbox` 为 `true`），则返回目前被选中的节点所组成的数组。(leafOnly, includeHalfChecked) 接收两个 boolean 类型的参数，1. 是否只是叶子节点，默认值为 `false` 2. 是否包含半选节点，默认值为 `false`。
+
+关键代码：
+
+```javascript
+batchDelete() {
+  let catIds = [];
+  let checkNodes = this.$refs.menuTree.getCheckedNodes();
+  console.log("被选中的元素", checkNodes);
+  for (let i = 0; i < checkNodes.length; i++) {
+    catIds.push(checkNodes[i].catId);
+  }
+  this.$confirm(`是否批量删除【${catIds}】菜单？`, "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  })
+    .then(() => {
+    this.$http({
+      url: this.$http.adornUrl("/product/category/delete"),
+      method: "post",
+      data: this.$http.adornData(catIds, false),
+    }).then(({ data }) => {
+      this.$message({
+        message: "批量删除成功",
+        type: "success",
+      });
+      // 刷新出新的菜单
+      this.getMenus();
+    });
+  })
+    .catch(() => {});
+}
+```
+
+---
 
 
 
