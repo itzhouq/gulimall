@@ -2176,3 +2176,157 @@ export default {
 
 ---
 
+#### 5) 删除-页面效果
+
+可以删除的菜单：没有子菜单并且没有被别的菜单引用。
+
+根据 elementUI 的Tree 组件文档编写：https://element.eleme.cn/#/zh-CN/component/tree
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200730212036.png)
+
+复制示例代码到 tree 标签中：
+
+```vue
+<el-tree :data="menus" :props="defaultProps" @node-click="handleNodeClick">
+  <span class="custom-tree-node" slot-scope="{ node, data }">
+    <span>{{ node.label }}</span>
+<span>
+      <el-button type="text" size="mini" @click="() => append(node, data)">Append</el-button>
+<el-button type="text" size="mini" @click="() => remove(node, data)">Delete</el-button>
+</span>
+</span>
+</el-tree>
+```
+
+node 指的是当前节点，data 存的是数据。
+
+编写点击事件的方法：
+
+```javascript
+append(data) {
+  console.log("append", node, data)
+},
+remove(node, data) {
+  console.log("remove", node, data)
+},
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200730214441.png)
+
+- expand-on-click-node：是否在点击节点的时候展开或者收缩节点， 默认值为 true，如果为 false，则只有点箭头图标的时候才会展开或者收缩节点。
+- 一级和二级菜单才显示Append，没有子菜单才显示 Delete：添加判断
+- show-checkbox：节点是否可被选择
+- node-key：每个树节点用来作为唯一标识的属性，整棵树应该是唯一的
+
+添加以上属性
+
+```vue
+<el-tree
+    :data="menus"
+    :props="defaultProps"
+    :expand-on-click-node="false"
+    show-checkbox
+    node-key="catId"
+  >
+    <span class="custom-tree-node" slot-scope="{ node, data }">
+      <span>{{ node.label }}</span>
+      <span>
+        <el-button
+          v-if="node.level <= 2"
+          type="text"
+          size="mini"
+          @click="() => append(node, data)"
+        >Append</el-button>
+        <el-button
+          v-if="node.childNodes.length == 0"
+          type="text"
+          size="mini"
+          @click="() => remove(node, data)"
+        >Delete</el-button>
+      </span>
+    </span>
+  </el-tree>
+```
+
+#### 6) 删除-逻辑删除
+
+- 测试 product 中 category 的删除功能。
+
+mybatis-plus 自动生成的delete方法可以根据传入的菜单Id的数组，批量删除菜单。
+
+```java
+/**
+* 删除
+* @RequestBody ：获取请求体,必须发送Post请求
+* SpringMVC自动将请求体的数据json转为对应的对象
+*/
+@RequestMapping("/delete")
+public R delete(@RequestBody Long[] catIds){
+  categoryService.removeByIds(Arrays.asList(catIds));
+  return R.ok();
+}
+```
+
+但是这里有两个问题：一是这样删除的方式是物理删除，删除之后不能找回；二是在删除之前需要检查被删除菜单是否被其他菜单引用，没有引用的菜单才能被删除。
+
+一般系统中的删除都采用逻辑删除。意思是通过一个字段来标识删除的状态，不是真的删除一条记录。mybatis也提供了逻辑删除的功能，我们通过官方文档编写实现。
+
+文档：https://mp.baomidou.com/guide/logic-delete.html
+
+- 配置 application.yml
+
+```yml
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: flag  # 全局逻辑删除的实体字段名(since 3.3.0,配置后可以忽略不配置步骤2)
+      logic-delete-value: 1 # 逻辑已删除值(默认为 1)
+      logic-not-delete-value: 0 # 逻辑未删除值(默认为 0)
+```
+
+- 实体类字段上加上`@TableLogic`注解
+
+```java
+@TableLogic
+private Integer deleted;
+```
+
+我们选择category 表的show_status字段作为标识字段，所以在改字段添加这个注解。
+
+```java
+@TableLogic(value = "1", delval = "0")
+private Integer showStatus;
+```
+
+因为删除的标识和全局刚好是反的，所以这里通过value和delval属性自定义删除标识，只在改表有效。
+
+配置文件中添加配置显示 SQL 语句：
+
+```yml
+logging:
+  level:
+    com.atguigu.gulimall: debug
+```
+
+重启项目。
+
+再次发送删除的请求，相关记录还在，只是吸怪了show_status 的值为 0，说明逻辑删除生效。
+
+```
+localhost:88/api/product/category/delete
+```
+
+发送的 SQL：
+
+```sql
+Preparing: UPDATE pms_category SET show_status=0 WHERE cat_id IN ( ? ) AND show_status=1
+```
+
+---
+
+
+
+
+
+
+
