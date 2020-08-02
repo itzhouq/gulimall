@@ -73,6 +73,15 @@ public class CategoryController {
     }
 
     /**
+     * 批量修改
+     */
+    @RequestMapping("/update/sort")
+    public R updatSort(@RequestBody CategoryEntity[] category){
+        categoryService.updateBatchById(Arrays.asList(category));
+        return R.ok();
+    }
+
+    /**
      * 修改
      */
     @RequestMapping("/update")
@@ -89,10 +98,6 @@ public class CategoryController {
      */
     @RequestMapping("/delete")
     public R delete(@RequestBody Long[] catIds){
-        // TODO 删除之前需要检查当前菜单是否被别的地方引用
-        categoryService.removeMenuByIds(Arrays.asList(catIds));
-		// categoryService.removeByIds(Arrays.asList(catIds));
-
         return R.ok();
     }
 
