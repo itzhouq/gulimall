@@ -1,6 +1,7 @@
 package com.atguigu.gulimall.product;
 
 import com.aliyun.oss.OSS;
+import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.model.PutObjectRequest;
 import com.atguigu.gulimall.product.entity.BrandEntity;
@@ -10,7 +11,9 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import javax.annotation.Resource;
 import java.io.File;
 
 @RunWith(SpringRunner.class)
@@ -19,6 +22,22 @@ public class GulimallProductApplicationTests {
 
     @Autowired
     private BrandService brandService;
+
+    @Resource
+    OSSClient ossClient;
+
+    @Test
+    public void testUploadStarter() {
+        // 创建PutObjectRequest对象。
+        PutObjectRequest putObjectRequest = new PutObjectRequest("gulimall-itzhouq", "6qvy97.jpg", new File("/Users/itzhouq/Pictures/6qvy97.jpg"));
+
+        // 上传文件。
+        ossClient.putObject(putObjectRequest);
+
+        // 关闭OSSClient。
+        ossClient.shutdown();
+        System.out.println("上传成功");
+    }
 
     @Test
     public void testUpload() {
