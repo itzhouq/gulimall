@@ -2896,4 +2896,214 @@ batchDelete() {
 
 
 
+### 2、品牌管理
+
+#### 1）使用逆向工程生成前后端代码
+
+将 生成的 brand.vue 和 brand-add-or-update.vue 文件拷贝到 vue 工程的 category 文件夹中。
+
+在菜单管理中新增`品牌管理`。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200802160144.png)
+
+
+
+暂时去除 vue 项目中的权限管理，让按钮都显示出来。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200802160302.png)
+
+
+
+---
+
+#### 2) 效果优化和快速显示开关
+
+- 显示状态显示开关按钮，通过按钮操作发送请求修改显示状态。
+
+参考 Table 表格组件的自定义列：https://element.eleme.cn/#/zh-CN/component/table
+
+```javascript
+<template slot-scope="scope">
+  <i class="el-icon-time"></i>
+<span style="margin-left: 10px">{{ scope.row.date }}</span>
+</template>
+```
+
+将其中的内容修改为开关组件switch。
+
+```javascript
+<template slot-scope="scope">
+  <el-switch v-model="scope.row.date" active-color="#13ce66" inactive-color="#ff4949"></el-switch>
+</template>
+```
+
+新增弹窗中的使用同样的方式实现。
+
+- 监听开关switch的change 事件获取操作数据
+
+```JavaScript
+<el-switch
+v-model="scope.row.showStatus"
+active-color="#13ce66"
+inactive-color="#ff4949"
+:active-value = 1
+:inactive-value = 0
+@change="updateBrandStatus(scope.row)"
+```
+
+
+
+```JavaScript
+updateBrandStatus(data) {
+  console.log("最新数据：", data);
+  let {brandId, showStatus} = data;
+  // 发送修改状态的请求
+  this.$http({
+    url: this.$http.adornUrl("/product/brand/update"),
+    method: "post",
+    data: this.$http.adornData({brandId, showStatus}, false),
+  }).then(({ data }) => {
+    this.$message({
+      type: "success",
+      message: "状态更新成功"
+    })
+  });
+},
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200802171536.png)
+
+---
+
+#### 3） 阿里云对象存储 OSS
+
+开通自己的阿里云 OSS 对象存储服务。
+
+阿里云 OSS 控制台：https://oss.console.aliyun.com/overview
+
+API 文档：https://help.aliyun.com/document_detail/31947.html?spm=5176.8465980.0.dexternal.4e701450SZBMtw
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200803231412.png)
+
+
+
+| 中文      | 英文      | 说明                                                         |
+| :-------- | :-------- | :----------------------------------------------------------- |
+| 存储空间  | Bucket    | 存储空间是您用于存储对象（Object）的容器，所有的对象都必须隶属于某个存储空间。 |
+| 对象/文件 | Object    | 对象是 OSS 存储数据的基本单元，也被称为OSS的文件。对象由元信息（Object Meta）、用户数据（Data）和文件名（Key）组成。对象由存储空间内部唯一的Key来标识。 |
+| 地域      | Region    | 地域表示 OSS 的数据中心所在物理位置。您可以根据费用、请求来源等综合选择数据存储的地域。详情请查看[OSS已经开通的Region](https://help.aliyun.com/document_detail/31837.html#concept-zt4-cvy-5db)。 |
+| 访问域名  | Endpoint  | Endpoint 表示OSS对外服务的访问域名。OSS以HTTP RESTful API的形式对外提供服务，当访问不同地域的时候，需要不同的域名。通过内网和外网访问同一个地域所需要的域名也是不同的。具体的内容请参见[各个Region对应的Endpoint](https://help.aliyun.com/document_detail/31837.html#concept-zt4-cvy-5db)。 |
+| 访问密钥  | AccessKey | AccessKey，简称 AK，指的是访问身份验证中用到的AccessKeyId 和AccessKeySecret。OSS通过使用AccessKeyId 和AccessKeySecret对称加密的方法来验证某个请求的发送者身份。AccessKeyId用于标识用户，AccessKeySecret是用户用于加密签名字符串和OSS用来验证签名字符串的密钥，其中AccessKeySecret 必须保密。 |
+
+文件上传的示意图：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200803232302.png)
+
+通过配置，前端直接上传文件到 OSS ，拿到文件的 URL。
+
+---
+
+#### 4）OSS 整合测试
+
+通过 Java 代码上传文件。文档：https://help.aliyun.com/document_detail/32013.html?spm=5176.8466032.0.dexternal.59f714503evR2J
+
+- 导入依赖：
+
+```xml
+<dependency>
+    <groupId>com.aliyun.oss</groupId>
+    <artifactId>aliyun-sdk-oss</artifactId>
+    <version>3.10.2</version>
+</dependency>
+```
+
+- 编写测试类
+
+```java
+@Test
+public void testUpload() {
+  // Endpoint以杭州为例，其它Region请按实际情况填写。
+  String endpoint = "http://oss-cn-hangzhou.aliyuncs.com";
+  // 阿里云主账号AccessKey拥有所有API的访问权限，风险很高。强烈建议您创建并使用RAM账号进行API访问或日常运维，请登录 https://ram.console.aliyun.com 创建RAM账号。
+  String accessKeyId = "<yourAccessKeyId>";
+  String accessKeySecret = "<yourAccessKeySecret>";
+
+  // 创建OSSClient实例。
+  OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+
+  // 创建PutObjectRequest对象。
+  PutObjectRequest putObjectRequest = new PutObjectRequest("<yourBucketName>", "<yourObjectName>", new File("<yourLocalFile>"));
+
+  // 如果需要上传时设置存储类型与访问权限，请参考以下示例代码。
+  // ObjectMetadata metadata = new ObjectMetadata();
+  // metadata.setHeader(OSSHeaders.OSS_STORAGE_CLASS, StorageClass.Standard.toString());
+  // metadata.setObjectAcl(CannedAccessControlList.Private);
+  // putObjectRequest.setMetadata(metadata);
+
+  // 上传文件。
+  ossClient.putObject(putObjectRequest);
+
+  // 关闭OSSClient。
+  ossClient.shutdown();
+}
+```
+
+- endpoint：概览界面中的 endpoint：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200803233851.png)
+
+
+
+- accessKeyId 和 accessKeySecret 需要开通子账号。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200803234043.png)
+
+开通后可以得到这两个值。
+
+开通授权：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200803234425.png)
+
+运行测试代码成功。
+
+
+
+Spring-Cloud-Alibaba-OSS 对文件操作进行了封装。
+
+- 导入依赖: 导入到 common 中
+
+```xml
+<dependency>
+  <groupId>com.alibaba.cloud</groupId>
+  <artifactId>spring-cloud-starter-alicloud-oss</artifactId>
+</dependency>
+```
+
+- 配置文件中添加 AccessKey、secretKey、endpoint。
+
+我这的配置文件放在 nacos 中配置。
+
+- 编写测试类
+
+```java
+@Resource
+OSSClient ossClient;
+
+@Test
+public void testUploadStarter() {
+  // 创建PutObjectRequest对象。
+  PutObjectRequest putObjectRequest = new PutObjectRequest("gulimall-itzhouq", "6qvy97.jpg", new File("/Users/itzhouq/Pictures/6qvy97.jpg"));
+  // 上传文件。
+  ossClient.putObject(putObjectRequest);
+
+  // 关闭OSSClient。
+  ossClient.shutdown();
+  System.out.println("上传成功");
+}
+```
+
+也可以上传成功。
+
+---
+
 
