@@ -3104,4 +3104,259 @@ public void testUploadStarter() {
 
 ---
 
+#### 5）OSS 获取服务端签名
+
+为了提高文件上传的效率，一般采用客户端获取服务端签名后，直接上传 OSS 的方式上传文件。如果文件上传到服务器再上传到 OSS 的方式，不仅会使服务端请求压力太大，上传的效率也有影响。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200803232302.png)
+
+除了现在使用的对象存储服务，还可能会使用到其他第三方的服务如短信、物流等。考虑将这些服务聚合到一个单独的微服务中。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200804234137.png)
+
+依赖 web 和 openFeign 以及 common 服务。加入依赖管理。
+
+同时将 common 中的 OSS 移动到该模块。
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.1.8.RELEASE</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.atguigu.gulimall</groupId>
+    <artifactId>gulimall-third-party</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>gulimall-third-party</name>
+    <description>第三方服务</description>
+
+    <properties>
+        <java.version>1.8</java.version>
+        <spring-cloud.version>Greenwich.SR3</spring-cloud.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.atguigu.gulimall</groupId>
+            <artifactId>gulimall-common</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <exclusions>
+                  <exclusion>
+                      <groupId>com.baomidou</groupId>
+                      <artifactId>mybatis-plus-boot-starter</artifactId>
+                  </exclusion>
+              </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alicloud-oss</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>2.1.0.RELEASE</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+```
+
+配置文件 bootstrap.properties
+
+```properties
+spring.cloud.nacos.config.server-addr=127.0.0.1:8848
+spring.cloud.nacos.config.namespace=5b64e030-e265-448e-8ad1-0af0c27d4ab0
+
+spring.cloud.nacos.config.ext-config[0].data-id=oss.yml
+spring.cloud.nacos.config.ext-config[0].group=DEFAULT_GROUP
+spring.cloud.nacos.config.ext-config[0].refresh=true
+```
+
+在 nacos 中新建命名空间，新建 oss.yml 配置文件。将之前的 oss 配置添加到 oss.yml 中。
+
+application.yml
+
+```yml
+spring:
+  application:
+    name: gulimall-third-party
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+
+server:
+  port: 30000
+```
+
+单元测试：
+
+```java
+@Resource
+OSSClient ossClient;
+
+@Test
+public void testUpload() {
+
+  // 创建PutObjectRequest对象。
+  PutObjectRequest putObjectRequest = new PutObjectRequest("gulimall-itzhouq", "haha.jpg", new File("/Users/itzhouq/Pictures/gj3gwd.jpg"));
+
+  // 上传文件。
+  ossClient.putObject(putObjectRequest);
+
+  // 关闭OSSClient。
+  ossClient.shutdown();
+  System.out.println("上传成功");
+}
+```
+
+---
+
+-  服务端签名后直传：https://help.aliyun.com/document_detail/31926.html?spm=a2c4g.11186623.6.1552.775374b8VfM3Eh
+
+服务端签名后直传的原理如下：
+
+1. 用户发送上传Policy请求到应用服务器。
+2. 应用服务器返回上传Policy和签名给用户。
+3. 用户直接上传数据到OSS。
+
+根据官网示例代码编写一个测试的 Controller。
+
+```java
+package com.atguigu.gulimall.thirdparty.controller;
+
+import com.aliyun.oss.OSS;
+import com.aliyun.oss.common.utils.BinaryUtil;
+import com.aliyun.oss.model.MatchMode;
+import com.aliyun.oss.model.PolicyConditions;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.annotation.Resource;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/**
+ * 对象存储
+ * @author zhouquan
+ * @date 2020/8/5 23:24
+ */
+@RestController
+public class OssController {
+
+    @Resource
+    private OSS ossClient;
+
+    @Value("${spring.cloud.alicloud.oss.endpoint}")
+    private String endpoint;
+
+    @Value("${spring.cloud.alicloud.oss.bucket}")
+    private String bucket;
+
+    @Value("${spring.cloud.alicloud.access-key}")
+    private String accessId;
+
+    @RequestMapping("/oss/policy")
+    public Map<String, String> policy() {
+        String host = "https://" + bucket + "." + endpoint; // host的格式为 bucketname.endpoint
+        String format = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        String dir = format +"/"; // 用户上传文件时指定的前缀。
+
+        Map<String, String> respMap = null;
+        try {
+            long expireTime = 30;
+            long expireEndTime = System.currentTimeMillis() + expireTime * 1000;
+            Date expiration = new Date(expireEndTime);
+            // PostObject请求最大可支持的文件大小为5 GB，即CONTENT_LENGTH_RANGE为5*1024*1024*1024。
+            PolicyConditions policyConds = new PolicyConditions();
+            policyConds.addConditionItem(PolicyConditions.COND_CONTENT_LENGTH_RANGE, 0, 1048576000);
+            policyConds.addConditionItem(MatchMode.StartWith, PolicyConditions.COND_KEY, dir);
+
+            String postPolicy = ossClient.generatePostPolicy(expiration, policyConds);
+            byte[] binaryData = postPolicy.getBytes("utf-8");
+            String encodedPolicy = BinaryUtil.toBase64String(binaryData);
+            String postSignature = ossClient.calculatePostSignature(postPolicy);
+
+            respMap = new LinkedHashMap<String, String>();
+            respMap.put("accessid", accessId);
+            respMap.put("policy", encodedPolicy);
+            respMap.put("signature", postSignature);
+            respMap.put("dir", dir);
+            respMap.put("host", host);
+            respMap.put("expire", String.valueOf(expireEndTime / 1000));
+        } catch (Exception e) {
+            // Assert.fail(e.getMessage());
+            System.out.println(e.getMessage());
+        } finally {
+            ossClient.shutdown();
+        }
+        return respMap;
+    }
+}
+```
+
+访问：http://localhost:30000/oss/policy
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200805233931.png)
+
+- 将请求配置成网关地址：所有的请求先通过网关。
+
+```yml
+- id: third_party_route
+uri: lb://gulimall-third-party
+predicates:
+- Path=/api/thirdparty/**
+filters:
+- RewritePath=/api/thirdparty/(?<segment>/?.*), /$\{segment}
+```
+
+访问：http://localhost:88/api/thirdparty/oss/policy 结果相同。
+
+---
+
 
