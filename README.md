@@ -3283,7 +3283,7 @@ import java.util.Map;
 
 /**
  * 对象存储
- * @author itzhouq
+ * @author zhouquan
  * @date 2020/8/5 23:24
  */
 @RestController
@@ -3356,6 +3356,400 @@ filters:
 ```
 
 访问：http://localhost:88/api/thirdparty/oss/policy 结果相同。
+
+---
+
+#### 6) OSS 前后端联调测试
+
+将资料`/docs/代码/前端/upload`中的 vue 文件和 js 文件拷贝到前端项目的components文件夹中。修改action。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200808082245.png)
+
+
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200808082343.png)
+
+现在需要将品牌新增logo地址改成文件上传组件。
+
+修改brand-add-or-update.vue 文件：
+
+- 引入组件
+
+```javascript
+import SingleUpload from "@/components/upload/singleUpload";
+```
+
+- 使用组件
+
+```html
+<!-- <el-input v-model="dataForm.logo" placeholder="品牌logo地址"></el-input> -->
+<single-upload v-model="dataForm.logo"></single-upload>
+```
+
+- 声明组件
+
+```javascript
+components: { SingleUpload },
+```
+
+测试上传：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200808090402.png)
+
+响应的数据格式如图。
+
+```javascript
+beforeUpload(file) {
+  let _self = this;
+  return new Promise((resolve, reject) => {
+    policy().then(response => {
+      console.log("响应的数据" , response)
+      _self.dataObj.policy = response.data.policy;
+      _self.dataObj.signature = response.data.signature;
+      _self.dataObj.ossaccessKeyId = response.data.accessid;
+      _self.dataObj.key = response.data.dir +getUUID()+'_${filename}';
+      _self.dataObj.dir = response.data.dir;
+      _self.dataObj.host = response.data.host;
+      resolve(true)
+    }).catch(err => {
+      reject(false)
+    })
+  })
+},
+```
+
+但是组件中是从response.data 中取数据的，所以需要修改 policy 接口的后台代码。
+
+将数据包装在 R 对象中。再次测试。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200808090822.png)
+
+出现跨域问题。
+
+需要将 OSS 对应的 Bucket 设置为可跨域访问的。文档：https://help.aliyun.com/document_detail/91868.html?spm=a2c4g.11186623.2.15.72676e28xJFHoa#concept-ahk-rfz-2fb
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200808091104.png)
+
+
+
+修改完成后再次测试上传文件。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200808091235.png)
+
+文件上传成功后，表单的 logo 应该是存放的是图片的 OSS 地址。
+
+---
+
+#### 7）表单校验|自定义校验器
+
+修改按钮的显示状态：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200808092322.png)
+
+```html
+<el-switch v-model="dataForm.showStatus" active-color="#13ce66" inactive-color="#ff4949" :active-value="1" :inactive-value="0"></el-switch>
+```
+
+表单检验不够晚上，并且图片没有显示出来。
+
+- Table 自定义列：https://element.eleme.cn/#/zh-CN/component/table
+
+```html
+<template slot-scope="scope">
+  <i class="el-icon-time"></i>
+  <span style="margin-left: 10px">{{ scope.row.date }}</span>
+</template>
+```
+
+- 校验规则参考 Form 的自定义规则：https://element.eleme.cn/#/zh-CN/component/form
+
+---
+
+
+
+#### 8) JSR303 的数据校验
+
+- 给 Bean 添加校验注解，并给出 message。
+- 开启校验功能：@Valid
+- 给校验的 Bean 后紧跟一个 BindingResult ，就可以获取到校验的结果。（可选）
+
+---
+
+#### 9）统一的异常处理
+
+在 Product 中添加统一异常处理类：
+
+```java
+package com.atguigu.gulimall.product.exception;
+
+import com.atguigu.common.exception.BizCodeEnum;
+import com.atguigu.common.utils.R;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.HashMap;
+
+/**
+ * @author itzhouq
+ * @date 2020/8/8 10:26
+ */
+@Slf4j
+@RestControllerAdvice(basePackages = "com.atguigu.gulimall.product")
+public class GulimallExceptionControllerAdvice {
+
+
+    @ExceptionHandler(value = MethodArgumentNotValidException.class)
+    public R handleValidException(MethodArgumentNotValidException e) {
+        log.error("数据校验出现问题{}, 异常类型：{}", e.getMessage(), e.getCause());
+        BindingResult bindingResult = e.getBindingResult();
+
+        HashMap<String, String> map = new HashMap<>();
+        bindingResult.getFieldErrors().forEach( fieldError -> {
+            map.put(fieldError.getField(), fieldError.getDefaultMessage());
+        });
+
+        return R.error(BizCodeEnum.VALID_EXCEPTION.getCode(), BizCodeEnum.VALID_EXCEPTION.getMsg()).put("data", map);
+    }
+
+    @ExceptionHandler(value = Throwable.class)
+    public R handleException(Throwable throwable) {
+        return R.error();
+    }
+}
+```
+
+错误码在 common 中定义：
+
+```java
+package com.atguigu.common.exception;
+
+/**
+ * @author itzhouq
+ * @date 2020/8/8 10:34
+ *
+ * 错误码和错误信息定义类
+ *
+ * 1. 错误码定义规则为5个数字
+ * 2. 前两位标识业务场景，最后三位表示错误码。
+ * 3. 维护错误码后需要维护错误描述，将他们定义为枚举形式
+ *
+ * 错误码列表：
+ *
+ * 10：通用
+ *      001：参数格式校验
+ * 11：商品
+ * 12：订单
+ * 13：购物车
+ * 14：物流
+ */
+public enum BizCodeEnum {
+
+    UNKNOW_EXCEPTION(10000, "系统未知异常"),
+    VALID_EXCEPTION(10001, "参数格式校验失败")
+
+    ;
+
+    public int code;
+    public String msg;
+
+    BizCodeEnum(int code, String msg){
+        this.code = code;
+        this.msg = msg;
+    }
+
+    public String getMsg() {
+        return msg;
+    }
+
+    public int getCode() {
+        return code;
+    }
+}
+```
+
+测试：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200808104855.png)
+
+---
+
+#### 10）JSR303 分组校验
+
+新增和更新品牌都需要校验参数，但是校验参数的个数和格式可能不同。这就需要使用分组校验的功能。
+
+- 定义两个空接口用于分组
+
+```java
+/**
+	 * 品牌id
+	 */
+@TableId
+@NotNull(message = "修改必须指定品牌id", groups = {UpdateGroup.class})
+@Null(message = "新增不能指定品牌id", groups = {AddGroup.class})
+private Long brandId;
+/**
+	 * 品牌名
+	 */
+@NotNull(message = "品牌名不能为空", groups = {AddGroup.class, UpdateGroup.class})
+private String name;
+/**
+	 * 品牌logo地址
+	 */
+@NotEmpty(groups = {AddGroup.class})
+@URL(message = "logo必须是合法的URL", groups = {AddGroup.class, UpdateGroup.class})
+private String logo;
+/**
+	 * 介绍
+	 */
+private String descript;
+/**
+	 * 显示状态[0-不显示；1-显示]
+	 */
+private Integer showStatus;
+/**
+	 * 检索首字母
+	 */
+@NotEmpty(groups = {AddGroup.class})
+@Pattern(regexp = "^[a-zA-Z]$", message = "检索首字母必须是一个字母", groups = {AddGroup.class, UpdateGroup.class})
+private String firstLetter;
+/**
+	 * 排序
+	 */
+@NotNull(groups = {AddGroup.class})
+@Min(value = 0, message = "排序必须大于等于0", groups = {AddGroup.class, UpdateGroup.class})
+private Integer sort;
+
+```
+
+- 默认没有指定分组的校验注解，在分组校验情况下不生效。
+- 开启校验使用@Validated
+
+```java
+@RequestMapping("/save")
+public R save(@Validated({AddGroup.class}) @RequestBody BrandEntity brand){
+  brandService.save(brand);
+  return R.ok();
+}
+```
+
+---
+
+#### 11）自定义校验规则
+
+有时候校自带的校验规则不能满足我们的校验需求，比如校验 showStatus 可以使用正则表达式也可以使用自定义的校验规则。自定义校验规则有以下几点注意：
+
+- 编写一个自定义的校验注解
+- 编写一个自定义的校验器
+- 关联自定义的校验器和自定义的校验注解
+
+- 导入依赖：
+
+```xml
+<dependency>
+  <groupId>javax.validation</groupId>
+  <artifactId>validation-api</artifactId>
+  <version>2.0.1.Final</version>
+</dependency>
+```
+
+- 自定义注解
+
+```java
+package com.atguigu.common.validator;
+
+import com.atguigu.common.validator.group.ListValueConstraintValidator;
+
+import javax.validation.Constraint;
+import javax.validation.Payload;
+import java.lang.annotation.*;
+
+/**
+ * 自定义注解
+ * @author itzhouq
+ * @date 2020/8/8 12:03
+ */
+
+@Target({ElementType.METHOD, ElementType.FIELD, ElementType.ANNOTATION_TYPE, ElementType.CONSTRUCTOR, ElementType.PARAMETER, ElementType.TYPE_USE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Constraint(
+        validatedBy = {ListValueConstraintValidator.class}
+)
+public @interface ListValue {
+
+    String message() default "{com.atguigu.common.validator.ListValue.message}";
+
+    Class<?>[] groups() default {};
+
+    Class<? extends Payload>[] payload() default {};
+
+    int[] value() default {};
+}
+```
+
+- 自定义校验器
+
+```java
+package com.atguigu.common.validator.group;
+
+import com.atguigu.common.validator.ListValue;
+
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorContext;
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * 自定义校验器
+ * @author itzhouq
+ * @date 2020/8/8 12:12
+ */
+public class ListValueConstraintValidator implements ConstraintValidator<ListValue, Integer> {
+
+    private Set<Integer> set = new HashSet<>();
+    // 初始化方法
+    @Override
+    public void initialize(ListValue constraintAnnotation) {
+
+        int[] value = constraintAnnotation.value();
+        for (int v : value) {
+            set.add(v);
+        }
+    }
+
+    /**
+     * 判断是否校验成功
+     * @param integer  需要检验的值
+     * @param constraintValidatorContext  上下文对象
+     * @return 是否校验成功
+     */
+    @Override
+    public boolean isValid(Integer integer, ConstraintValidatorContext constraintValidatorContext) {
+        return set.contains(integer);
+    }
+}
+```
+
+配置文件：/gulimall-common/src/main/resources/ValidationMessages.properties
+
+```properties
+com.atguigu.common.validator.ListValue.message=必须提交指定的值
+```
+
+如果提示信息出现乱码可以将中文转成 Unicode 码。
+
+```xml
+com.atguigu.common.validator.ListValue.message=\u5fc5\u987b\u63d0\u4ea4\u6307\u5b9a\u7684\u503c
+```
+
+测试接口：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200808231846.png)
+
+- 测试前端
 
 ---
 
