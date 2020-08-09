@@ -3756,3 +3756,35 @@ com.atguigu.common.validator.ListValue.message=\u5fc5\u987b\u63d0\u4ea4\u6307\u5
 ---
 
 
+
+### 3、属性分组
+
+#### 1）SPU、SKU、规格参数、销售属性
+
+- SPU：标准化产品单元（Standard Product Unit）。是商品信息聚合的最小单元，是一组可复用、易检索的标准化信息的集合，该集合描述了一个产品的特性。
+
+比如小米 8 手机。是一类信息的聚合，而不是一个具体的手机。小米 8 手机有不同的颜色、硬件配置等。
+
+- SKU：库存量单位（Stock Keeping Unit）：即库存进出计量的基本单元，可以是以件、盒、托盘等为单位。
+
+SKU 指的是具体的某个产品。
+
+- 规格参数与销售数据：每个分类下的商品共享规格参数，与销售属性。只是有些商品不一定要用这个分类下的全部属性。
+  - 属性是以三级分类组织起来的
+  - 规格参数中有些是可以提供检索的
+  - 规格参数也是基本属性，他们具有自己的分组
+  - 属性的分组也是以三级分类组织起来的
+
+图中的规格参数，是手机这个三级分类下 SPU 共享的数据。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200809091556.png)
+
+销售属性简单说，就是特定的 SKU 除了共享数据，有区别其他的参数，比如颜色和售价。
+
+- 表设计
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200809092047.png)
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200809092205.png)
+
+
