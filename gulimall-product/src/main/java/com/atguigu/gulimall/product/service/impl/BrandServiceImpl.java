@@ -1,5 +1,6 @@
 package com.atguigu.gulimall.product.service.impl;
 
+import com.atguigu.gulimall.product.service.CategoryBrandRelationService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import java.util.Map;
@@ -13,9 +14,14 @@ import com.atguigu.gulimall.product.dao.BrandDao;
 import com.atguigu.gulimall.product.entity.BrandEntity;
 import com.atguigu.gulimall.product.service.BrandService;
 
+import javax.annotation.Resource;
+
 
 @Service("brandService")
 public class BrandServiceImpl extends ServiceImpl<BrandDao, BrandEntity> implements BrandService {
+
+    @Resource
+    private CategoryBrandRelationService categoryBrandRelationService;
 
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
@@ -27,6 +33,18 @@ public class BrandServiceImpl extends ServiceImpl<BrandDao, BrandEntity> impleme
         }
         IPage<BrandEntity> page = this.page(new Query<BrandEntity>().getPage(params), queryWrapper);
         return new PageUtils(page);
+    }
+
+    @Override
+    public void updateDetail(BrandEntity brand) {
+        // 保证冗余字段的一致性
+        this.updateById(brand);
+        if (!StringUtils.isEmpty(brand.getName())) {
+            // 同步更新其他关联表中的数据
+            categoryBrandRelationService.updateBrand(brand.getBrandId(), brand.getName());
+        }
+
+        // TODO 更新其他关联表
     }
 
 }
