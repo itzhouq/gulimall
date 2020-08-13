@@ -3787,4 +3787,99 @@ SKU 指的是具体的某个产品。
 
 ![](https://gitee.com/itzhouq/images/raw/master/notes/20200809092205.png)
 
+---
+
+#### 2）前端组件抽取和父子组价交互
+
+要做属性分组编辑的效果，点击左边菜单某个三级分类，右边显示该分组的规则参数。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200809095621.png)
+
+需要多次使用到菜单的功能，所以考虑将菜单抽取为单独的组件，方便引用。
+
+- 导入带单：将/sql/sys_menus.sql 导入到 gulimall-admin 库中执行。页面菜单显示：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200809101748.png)
+
+
+
+- **后台接口文档**：https://easydoc.xyz/doc/75716633/ZUqEdvA4/HqQGp9TI
+
+#### 3) 品牌分类关联与级联更新
+
+- 修改品牌分组管理的模糊查询和分页功能。
+- 分页功能参考 mybatisPlus 文档添加分页支持：https://mp.baomidou.com/guide/page.html
+
+在 product 中添加配置类：
+
+```java
+package com.atguigu.gulimall.product.config;
+
+import com.baomidou.mybatisplus.extension.plugins.PaginationInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.pagination.optimize.JsqlParserCountOptimize;
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+/**
+ * 分页插件
+ * @author itzhouq
+ * @date 2020/8/10 23:23
+ */
+
+@Configuration
+@EnableTransactionManagement // 开启事务
+@MapperScan("com.atguigu.gulimall.product.dao")
+public class MybatisConfig {
+
+    // 引入分页插件
+    @Bean
+    public PaginationInterceptor paginationInterceptor() {
+        PaginationInterceptor paginationInterceptor = new PaginationInterceptor();
+        // 设置请求的页面大于最大页后操作， true调回到首页，false 继续请求  默认false
+        paginationInterceptor.setOverflow(true);
+        // 设置最大单页限制数量，默认 500 条，-1 不受限制
+        paginationInterceptor.setLimit(1000);
+        // 开启 count 的 join 优化,只针对部分 left join
+        paginationInterceptor.setCountSqlParser(new JsqlParserCountOptimize(true));
+        return paginationInterceptor;
+    }
+}
+```
+
+分页功能可用。
+
+---
+
+#### 4）Objective对象划分
+
+- PO（Persistent Object）持久化对象
+
+PO 就是对应数据库中的某个表中的一条记录，多个记录可以用 PO 的集合。PO 中应该不包括任何对数据的操作。
+
+- DO（Domain Object）领域对象
+
+就是从现实世界中抽取出来的有形或无形的业务实体。
+
+- TO（Transfer Object）数据传输对象
+
+不同的应用程序之间传输的对象。
+
+- DTO（Data Transfer Object）数据传输对象
+
+这个概念来源于 J2EE 的设计模式，原来的目的是为了 EJB 的分布式应用提供粗粒度的数据实体，以减少分布式调用的次数从而提高分布式调用的性能和降低网络负载，但现在泛指用于展示层和服务层之间的数据传输对象对象。
+
+- VO（Value  Object）值对象
+
+通常用于业务层之间的数据传递，和 PO 一样也是仅仅包含数据而已。但应是抽象出的业务对象，可以和表对应，也可以不对应。
+
+VO 也可以解释成 View Object 视图对象。用于接受页面传递来的数据，封装对象。将业务处理完成的对象，封装成页面要用的数据。
+
+- BO（Business Object）业务对象
+
+从业务模型的角度看，见 UML 元件领域模型中的领域对象。封装业务逻辑的 Java 对象，通过调用 DAO 方法，结合 PO，VO 进行业务操作。BO 主要作用是把业务逻辑封装为一个对象。这个对象可以包括一个或多个其他对象。比如一个简历，有教育经历，工作经历，社会关系等等。我们可以把教育经历对应一个 PO，工作经历对应一个 PO，社会关系对应一个 PO。建立一个对应简历的 BO 对象处理简历，每个 BO 包含这些 PO。着花样处理业务逻辑时，我们就可以针对 BO 去处理。
+
+---
+
 
