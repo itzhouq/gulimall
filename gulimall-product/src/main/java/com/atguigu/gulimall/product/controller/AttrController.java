@@ -5,12 +5,9 @@ import java.util.Map;
 
 // import org.apache.shiro.authz.annotation.RequiresPermissions;
 import com.atguigu.gulimall.product.vo.AttrVo;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.atguigu.gulimall.product.entity.AttrEntity;
 import com.atguigu.gulimall.product.service.AttrService;
@@ -31,6 +28,23 @@ import com.atguigu.common.utils.R;
 public class AttrController {
     @Autowired
     private AttrService attrService;
+
+    /***
+     * @Description 规格参数查询
+     * @param params 请求参数
+     * @param catelogId 分类Id
+     * @return {@link com.atguigu.common.utils.R}
+     * @throws
+     * @author zhouquan
+     * @Date 2020/8/14 23:27
+     */
+    @GetMapping("/base/list/{catelogId}")
+    public R baseAttrList(@RequestParam Map<String, Object> params, @PathVariable("catelogId") Long catelogId) {
+
+        PageUtils page = attrService.queryBaseAttrPage(params, catelogId);
+        return R.ok().put("data", page);
+    }
+
 
     /**
      * 列表

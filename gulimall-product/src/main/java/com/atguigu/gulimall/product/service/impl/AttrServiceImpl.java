@@ -3,9 +3,12 @@ package com.atguigu.gulimall.product.service.impl;
 import com.atguigu.gulimall.product.dao.AttrAttrgroupRelationDao;
 import com.atguigu.gulimall.product.entity.AttrAttrgroupRelationEntity;
 import com.atguigu.gulimall.product.vo.AttrVo;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+
 import java.util.Map;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -49,6 +52,22 @@ public class AttrServiceImpl extends ServiceImpl<AttrDao, AttrEntity> implements
         attrAttrgroupRelationEntity.setAttrId(attrEntity.getAttrId());
         attrAttrgroupRelationEntity.setAttrGroupId(attr.getAttrGroupId());
         relationDao.insert(attrAttrgroupRelationEntity);
+    }
+
+    @Override
+    public PageUtils queryBaseAttrPage(Map<String, Object> params, Long catelogId) {
+        QueryWrapper<AttrEntity> queryWrapper = new QueryWrapper<>();
+        if (catelogId!= null) {
+            queryWrapper.eq("catelog_id", catelogId);
+        }
+        String key = (String) params.get("key");
+        if (!StringUtils.isEmpty(key)) {
+            queryWrapper.and(wapper -> {
+                wapper.eq("attr_id", key).or().like("attr_name", key);
+            });
+        }
+        IPage<AttrEntity> page = this.page(new Query<AttrEntity>().getPage(params), queryWrapper);
+        return new PageUtils(page);
     }
 
 }
