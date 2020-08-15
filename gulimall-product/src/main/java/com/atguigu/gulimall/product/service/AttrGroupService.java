@@ -1,10 +1,12 @@
 package com.atguigu.gulimall.product.service;
 
 import com.atguigu.gulimall.product.vo.AttrGroupRelationVo;
+import com.atguigu.gulimall.product.vo.AttrGroupWithAttrsVo;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.atguigu.common.utils.PageUtils;
 import com.atguigu.gulimall.product.entity.AttrGroupEntity;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -25,5 +27,12 @@ public interface AttrGroupService extends IService<AttrGroupEntity> {
      * @param groupRelationVos
      */
     void deleteRelation(AttrGroupRelationVo[] groupRelationVos);
+
+    /**
+     * 获取分类下所有分组&关联属性
+     * @param catelogId 分类Id
+     * @return
+     */
+    List<AttrGroupWithAttrsVo> getAttrGroupWithAttrsByCatelogId(Long catelogId);
 }
 

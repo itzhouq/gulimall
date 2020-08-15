@@ -12,9 +12,9 @@ import lombok.Data;
 public class BrandVo {
 
     /**
-     * 分类Id
+     * 品牌Id
      */
-    private Long catId;
+    private Long brandId;
 
     /**
      * 品牌名称
