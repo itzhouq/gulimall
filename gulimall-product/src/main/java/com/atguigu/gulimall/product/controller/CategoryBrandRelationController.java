@@ -52,7 +52,7 @@ public class CategoryBrandRelationController {
         List<BrandEntity> brandEntities = categoryBrandRelationService.getBrandsByCatId(catId);
         List<BrandVo> collect = brandEntities.stream().map(item -> {
             BrandVo brandVo = new BrandVo();
-            brandVo.setCatId(item.getBrandId());
+            brandVo.setBrandId(item.getBrandId());
             brandVo.setBrandName(item.getName());
             return brandVo;
         }).collect(Collectors.toList());
