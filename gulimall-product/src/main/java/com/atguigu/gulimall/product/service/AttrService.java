@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.atguigu.common.utils.PageUtils;
 import com.atguigu.gulimall.product.entity.AttrEntity;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,5 +27,12 @@ public interface AttrService extends IService<AttrEntity> {
     AttrRespVo getAttrInfo(Long attrId);
 
     void updateAttr(AttrVo attr);
+
+    /**
+     * 获取属性分组的关联的所有属性
+     * @param attrgroupId 属性分组Id
+     * @return
+     */
+    List<AttrEntity> getAttrRelation(Long attrgroupId);
 }
 
