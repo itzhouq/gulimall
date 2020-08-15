@@ -6,8 +6,10 @@ import com.atguigu.gulimall.product.dao.CategoryDao;
 import com.atguigu.gulimall.product.entity.AttrAttrgroupRelationEntity;
 import com.atguigu.gulimall.product.entity.AttrGroupEntity;
 import com.atguigu.gulimall.product.entity.CategoryEntity;
+import com.atguigu.gulimall.product.service.CategoryService;
 import com.atguigu.gulimall.product.vo.AttrRespVo;
 import com.atguigu.gulimall.product.vo.AttrVo;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,9 @@ public class AttrServiceImpl extends ServiceImpl<AttrDao, AttrEntity> implements
 
     @Resource
     private CategoryDao categoryDao;
+
+    @Resource
+    private CategoryService categoryService;
 
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
@@ -103,6 +108,53 @@ public class AttrServiceImpl extends ServiceImpl<AttrDao, AttrEntity> implements
 
         pageUtils.setList(attrRespVos);
         return pageUtils;
+    }
+
+    @Override
+    public AttrRespVo getAttrInfo(Long attrId) {
+        AttrRespVo attrRespVo = new AttrRespVo();
+        AttrEntity attrEntity = this.getById(attrId);
+        BeanUtils.copyProperties(attrEntity, attrRespVo);
+
+        // 1. 设置分组信息
+        AttrAttrgroupRelationEntity attrgroupRelationEntity = relationDao.selectOne(new QueryWrapper<AttrAttrgroupRelationEntity>().eq("attr_id", attrId));
+        if (attrgroupRelationEntity != null) {
+            attrRespVo.setAttrGroupId(attrgroupRelationEntity.getAttrGroupId());
+            AttrGroupEntity attrGroupEntity = attrGroupDao.selectById(attrgroupRelationEntity.getAttrGroupId());
+            if (attrGroupEntity != null) {
+                attrRespVo.setGroupName(attrGroupEntity.getAttrGroupName());
+            }
+        }
+
+        // 2. 设置分类信息
+        Long catelogId = attrEntity.getCatelogId();
+        Long[] catelogPath = categoryService.findCatelogPath(catelogId);
+        attrRespVo.setCatelogPath(catelogPath);
+        CategoryEntity categoryEntity = categoryDao.selectById(catelogId);
+        if (categoryEntity != null) {
+            attrRespVo.setCatelogName(categoryEntity.getName());
+        }
+        return attrRespVo;
+    }
+
+    @Transactional
+    @Override
+    public void updateAttr(AttrVo attr) {
+        AttrEntity attrEntity = new AttrEntity();
+        BeanUtils.copyProperties(attr, attrEntity);
+        this.updateById(attrEntity);
+
+        // 1. 设置分组关联
+        AttrAttrgroupRelationEntity attrAttrgroupRelationEntity = new AttrAttrgroupRelationEntity();
+        attrAttrgroupRelationEntity.setAttrGroupId(attr.getAttrGroupId());
+        attrAttrgroupRelationEntity.setAttrId(attr.getAttrId());
+
+        Integer count = relationDao.selectCount(new QueryWrapper<AttrAttrgroupRelationEntity>().eq("attr_id", attr.getAttrId()));
+        if (count > 0) {
+            relationDao.update(attrAttrgroupRelationEntity, new UpdateWrapper<AttrAttrgroupRelationEntity>().eq("attr_id", attr.getAttrId()));
+        } else {
+            relationDao.insert(attrAttrgroupRelationEntity);
+        }
     }
 
 }
