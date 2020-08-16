@@ -8,9 +8,11 @@ import com.atguigu.gulimall.product.feign.CouponFeignService;
 import com.atguigu.gulimall.product.service.*;
 import com.atguigu.gulimall.product.vo.*;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -120,10 +122,11 @@ public class SpuInfoServiceImpl extends ServiceImpl<SpuInfoDao, SpuInfoEntity> i
 
                 // 6.1 sku的基本信息: pms_sku_info
                 SkuInfoEntity skuInfoEntity = new SkuInfoEntity();
+                BeanUtils.copyProperties(item, skuInfoEntity);
                 skuInfoEntity.setBrandId(infoEntity.getBrandId());
                 skuInfoEntity.setCatalogId(infoEntity.getCatalogId());
                 skuInfoEntity.setSaleCount(0L);
-                skuInfoEntity.setSkuId(infoEntity.getId());
+                skuInfoEntity.setSpuId(infoEntity.getId());
                 skuInfoEntity.setSkuDefaultImg(defaultImg);
                 skuInfoService.saveSkuInfo(skuInfoEntity);
 
@@ -136,7 +139,7 @@ public class SpuInfoServiceImpl extends ServiceImpl<SpuInfoDao, SpuInfoEntity> i
                     skuImagesEntity.setImgUrl(img.getImgUrl());
                     skuImagesEntity.setDefaultImg(img.getDefaultImg());
                     return skuImagesEntity;
-                }).collect(Collectors.toList());
+                }).filter(entity -> StringUtils.isNotEmpty(entity.getImgUrl())).collect(Collectors.toList());
                 skuImagesService.saveBatch(imagesEntities);
 
                 // 6.3 sku的销售属性信息: pms_sku_sale_attr_value
@@ -149,18 +152,19 @@ public class SpuInfoServiceImpl extends ServiceImpl<SpuInfoDao, SpuInfoEntity> i
                 }).collect(Collectors.toList());
                 skuSaleAttrValueService.saveBatch(skuSaleAttrValueEntities);
 
+                // 6.4 sku的优惠满减等信息: gulimall_sms -> sms_sku_ladder\sms_sku_full_reduction\sms_member_price
                 SkuReductionTo skuReductionTo = new SkuReductionTo();
                 BeanUtils.copyProperties(item, skuReductionTo);
                 skuReductionTo.setSkuId(skuId);
-                R r1 = couponFeignService.saveSkuReductionTO(skuReductionTo);
-                if (r1.getCode() != 0) {
-                    log.error("远程保存sku优惠信息失败");
+                if (skuReductionTo.getFullCount() > 0 || skuReductionTo.getFullPrice().compareTo(new BigDecimal(0)) > 0) {
+                    R r1 = couponFeignService.saveSkuReductionTO(skuReductionTo);
+                    if (r1.getCode() != 0) {
+                        log.error("远程保存sku优惠信息失败");
+                    }
                 }
-
             });
         }
 
-        // 6.4 sku的优惠满减等信息: gulimall_sms -> sms_sku_ladder\sms_sku_full_reduction\sms_member_price
     }
 
     @Override

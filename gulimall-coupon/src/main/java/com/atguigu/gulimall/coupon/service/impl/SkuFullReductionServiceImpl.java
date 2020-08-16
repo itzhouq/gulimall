@@ -9,6 +9,7 @@ import com.atguigu.gulimall.coupon.service.SkuLadderService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -49,12 +50,16 @@ public class SkuFullReductionServiceImpl extends ServiceImpl<SkuFullReductionDao
         skuLadderEntity.setFullCount(skuReductionTo.getFullCount());
         skuLadderEntity.setDiscount(skuReductionTo.getDiscount());
         skuLadderEntity.setAddOther(skuReductionTo.getCountStatus());
-        skuLadderService.save(skuLadderEntity);
+        if (skuReductionTo.getFullCount() > 0) {
+            skuLadderService.save(skuLadderEntity);
+        }
 
         // 2. 满减： sms_sku_full_reduction
         SkuFullReductionEntity skuFullReductionEntity = new SkuFullReductionEntity();
         BeanUtils.copyProperties(skuReductionTo, skuFullReductionEntity);
-        this.save(skuFullReductionEntity);
+        if (skuReductionTo.getFullPrice().compareTo(new BigDecimal(0)) > 0) {
+            this.save(skuFullReductionEntity);
+        }
 
         // 3. 会员价格: sms_member_price
         List<MemberPrice> memberPrice = skuReductionTo.getMemberPrice();
@@ -66,7 +71,7 @@ public class SkuFullReductionServiceImpl extends ServiceImpl<SkuFullReductionDao
             priceEntity.setMemberPrice(item.getPrice());
             priceEntity.setAddOther(1);
             return priceEntity;
-        }).collect(Collectors.toList());
+        }).filter(item -> item.getMemberPrice().compareTo(new BigDecimal(0)) > 0).collect(Collectors.toList());
         memberPriceService.saveBatch(collect);
     }
 
