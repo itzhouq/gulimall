@@ -15,6 +15,8 @@
 #    name: gulimall-product
 #  messages:
 #    encoding: UTF-8
+#  jackson:
+#    date-format: yyyy-MM-dd HH:mm:ss
 #
 #mybatis-plus:
 #  mapper-locations: classpath*:/mapper/**/*.xml    # 配置 mapper 文件的位置
