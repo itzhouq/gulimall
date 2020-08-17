@@ -176,23 +176,23 @@ public class SpuInfoServiceImpl extends ServiceImpl<SpuInfoDao, SpuInfoEntity> i
     public PageUtils queryPageByCondition(Map<String, Object> params) {
         QueryWrapper<SpuInfoEntity> wrapper = new QueryWrapper<>();
         String key = (String) params.get("key");
-        if (StringUtils.isNotEmpty(key)) {
+        if (StringUtils.isNotEmpty(key) && !"0".equalsIgnoreCase(key)) {
             wrapper.and(w -> {
                 w.eq("id", key).or().like("spu_name", key);
             });
         }
 
         String status = (String) params.get("status");
-        if (StringUtils.isNotEmpty(status)) {
+        if (StringUtils.isNotEmpty(status) && !"0".equalsIgnoreCase(status)) {
             wrapper.eq("publish_status", status);
         }
         String brandId = (String) params.get("brandId");
-        if (StringUtils.isNotEmpty(key)) {
+        if (StringUtils.isNotEmpty(key) && !"0".equalsIgnoreCase(brandId)) {
             wrapper.eq("brand_id", brandId);
         }
 
         String catelogId = (String) params.get("catelogId");
-        if (StringUtils.isNotEmpty(catelogId)) {
+        if (StringUtils.isNotEmpty(catelogId) && !"0".equalsIgnoreCase(catelogId)) {
             wrapper.eq("catalog_id", catelogId);
         }
 
