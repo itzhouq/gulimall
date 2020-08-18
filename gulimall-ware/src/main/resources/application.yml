@@ -1,27 +1,36 @@
-
-spring:
-  datasource:
-    type: com.alibaba.druid.pool.DruidDataSource
-    driverClassName: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://47.96.30.109:3306/gulimall_wms?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: root
-    password: 123456
-  cloud:
-    nacos:
-      discovery:
-        server-addr: 127.0.0.1:8848
-  application:
-    name: gulimall-ware
-
-mybatis-plus:
-  mapper-locations: classpath*:/mapper/**/*.xml    # 配置 mapper 文件的位置
-  global-config:
-    db-config:
-      id-type: auto  # 配置主键生成规则
-
-server:
-  port: 11000
-
-logging:
-  level:
-    com.atguigu: debug
+#
+#spring:
+#  datasource:
+#    type: com.alibaba.druid.pool.DruidDataSource
+#    driverClassName: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://47.96.30.109:3306/gulimall_wms?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai
+#    username: root
+#    password: 123456
+#  cloud:
+#    nacos:
+#      discovery:
+#        server-addr: 127.0.0.1:8848
+#    alicloud:
+#      access-key: LTAI5GBGFQKtfsJLehCMSJkK
+#      secret-key: aKO82Nsqi2wjBlUcoGmHilBaTuPjHi
+#      oss:
+#        endpoint: oss-cn-shanghai.aliyuncs.com
+#  application:
+#    name: gulimall-ware
+#  messages:
+#    encoding: UTF-8
+#  jackson:
+#    date-format: yyyy-MM-dd HH:mm:ss
+#
+#mybatis-plus:
+#  mapper-locations: classpath*:/mapper/**/*.xml    # 配置 mapper 文件的位置
+#  global-config:
+#    db-config:
+#      id-type: auto  # 配置主键生成规则
+#
+#server:
+#  port: 11000
+#
+#logging:
+#  level:
+#    com.atguigu: debug
