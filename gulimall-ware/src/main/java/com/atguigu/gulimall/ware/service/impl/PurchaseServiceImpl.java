@@ -60,6 +60,8 @@ public class PurchaseServiceImpl extends ServiceImpl<PurchaseDao, PurchaseEntity
         List<PurchaseDetailEntity> purchaseDetailEntityList = items.stream().map(item -> PurchaseDetailEntity.builder().id(item).purchaseId(finalPurchaseId)
                         .status(WareConstant.PurchaseDetailEnum.ASSIGNED.getCode()).build()).collect(Collectors.toList());
         purchaseDetailService.updateBatchById(purchaseDetailEntityList);
+
+        this.updateById(PurchaseEntity.builder().id(purchaseId).updateTime(new Date()).build());
     }
 
 }
