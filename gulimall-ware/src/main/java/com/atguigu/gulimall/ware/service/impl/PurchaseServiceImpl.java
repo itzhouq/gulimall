@@ -1,7 +1,16 @@
 package com.atguigu.gulimall.ware.service.impl;
 
+import com.atguigu.common.constant.WareConstant;
+import com.atguigu.gulimall.ware.entity.PurchaseDetailEntity;
+import com.atguigu.gulimall.ware.service.PurchaseDetailService;
+import com.atguigu.gulimall.ware.vo.MergeVo;
 import org.springframework.stereotype.Service;
+
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -11,19 +20,46 @@ import com.atguigu.common.utils.Query;
 import com.atguigu.gulimall.ware.dao.PurchaseDao;
 import com.atguigu.gulimall.ware.entity.PurchaseEntity;
 import com.atguigu.gulimall.ware.service.PurchaseService;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.Resource;
 
 
 @Service("purchaseService")
 public class PurchaseServiceImpl extends ServiceImpl<PurchaseDao, PurchaseEntity> implements PurchaseService {
 
+    @Resource
+    private PurchaseDetailService purchaseDetailService;
     @Override
     public PageUtils queryPage(Map<String, Object> params) {
-        IPage<PurchaseEntity> page = this.page(
-                new Query<PurchaseEntity>().getPage(params),
-                new QueryWrapper<PurchaseEntity>()
-        );
+        IPage<PurchaseEntity> page = this.page(new Query<PurchaseEntity>().getPage(params), new QueryWrapper<>());
 
         return new PageUtils(page);
+    }
+
+    @Override
+    public PageUtils queryPageUnreceive(Map<String, Object> params) {
+        IPage<PurchaseEntity> page = this.page(
+                new Query<PurchaseEntity>().getPage(params),
+                new QueryWrapper<PurchaseEntity>().eq("status", 0).or().eq("status", 1)
+        );
+        return new PageUtils(page);
+    }
+
+    @Transactional
+    @Override
+    public void mergePurchase(MergeVo mergeVo) {
+        Long purchaseId = mergeVo.getPurchaseId();
+        if (purchaseId == null) {
+            PurchaseEntity purchaseEntity = PurchaseEntity.builder().status(WareConstant.PurchaseEnum.CREATE.getCode()).createTime(new Date()).updateTime(new Date()).build();
+            this.save(purchaseEntity);
+            purchaseId = purchaseEntity.getId();
+        }
+        List<Long> items = mergeVo.getItems();
+        Long finalPurchaseId = purchaseId;
+        List<PurchaseDetailEntity> purchaseDetailEntityList = items.stream().map(item -> PurchaseDetailEntity.builder().id(item).purchaseId(finalPurchaseId)
+                        .status(WareConstant.PurchaseDetailEnum.ASSIGNED.getCode()).build()).collect(Collectors.toList());
+        purchaseDetailService.updateBatchById(purchaseDetailEntityList);
     }
 
 }
