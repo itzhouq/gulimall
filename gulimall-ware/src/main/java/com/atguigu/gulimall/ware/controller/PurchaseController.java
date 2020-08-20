@@ -2,6 +2,7 @@ package com.atguigu.gulimall.ware.controller;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 // import org.apache.shiro.authz.annotation.RequiresPermissions;
@@ -28,6 +29,17 @@ import com.atguigu.common.utils.R;
 public class PurchaseController {
     @Autowired
     private PurchaseService purchaseService;
+
+    /**
+     * 领取采购单
+     * @param ids 采购单Id集合
+     * @return
+     */
+    @PostMapping("/received")
+    public R received(@RequestBody List<Long> ids) {
+        purchaseService.received(ids);
+        return R.ok();
+    }
 
     /**
      * 合并采购需求
