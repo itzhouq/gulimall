@@ -58,6 +58,7 @@ public class PurchaseServiceImpl extends ServiceImpl<PurchaseDao, PurchaseEntity
         }
 
         // TODO 确认采购单状态为0或者1
+
         List<Long> items = mergeVo.getItems();
         Long finalPurchaseId = purchaseId;
         List<PurchaseDetailEntity> purchaseDetailEntityList = items.stream().map(item -> PurchaseDetailEntity.builder().id(item).purchaseId(finalPurchaseId)
