@@ -108,6 +108,18 @@ public class AttrController {
     }
 
     /**
+     * 修改商品规格
+     * @param spuId
+     * @param entities
+     * @return
+     */
+    @PostMapping("/update/{spuId}")
+    public R updateSpuAttr(@PathVariable("spuId") Long spuId, @RequestBody List<ProductAttrValueEntity> entities) {
+        productAttrValueService.updateSpuAttr(spuId, entities);
+        return R.ok();
+    }
+
+    /**
      * 删除
      */
     @RequestMapping("/delete")
