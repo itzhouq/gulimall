@@ -21,6 +21,7 @@ import com.atguigu.gulimall.ware.dao.PurchaseDao;
 import com.atguigu.gulimall.ware.entity.PurchaseEntity;
 import com.atguigu.gulimall.ware.service.PurchaseService;
 import org.springframework.transaction.annotation.Transactional;
+import sun.tools.jstat.Literal;
 
 import javax.annotation.Resource;
 
@@ -55,6 +56,9 @@ public class PurchaseServiceImpl extends ServiceImpl<PurchaseDao, PurchaseEntity
             this.save(purchaseEntity);
             purchaseId = purchaseEntity.getId();
         }
+
+        // TODO 确认采购单状态为0或者1
+
         List<Long> items = mergeVo.getItems();
         Long finalPurchaseId = purchaseId;
         List<PurchaseDetailEntity> purchaseDetailEntityList = items.stream().map(item -> PurchaseDetailEntity.builder().id(item).purchaseId(finalPurchaseId)
@@ -62,6 +66,28 @@ public class PurchaseServiceImpl extends ServiceImpl<PurchaseDao, PurchaseEntity
         purchaseDetailService.updateBatchById(purchaseDetailEntityList);
 
         this.updateById(PurchaseEntity.builder().id(purchaseId).updateTime(new Date()).build());
+    }
+
+    @Override
+    public void received(List<Long> ids) {
+
+        // 1. 确认当前采购单状态是新建或者已分配
+        List<PurchaseEntity> purchaseEntityList = ids.stream().map(this::getById)
+                .filter(item -> item.getStatus() == WareConstant.PurchaseEnum.CREATE.getCode() || item.getStatus() == WareConstant.PurchaseEnum.ASSIGNED.getCode())
+                .peek(item -> item.setStatus(WareConstant.PurchaseEnum.RECEIVE.getCode()))
+                .peek(item -> item.setUpdateTime(new Date()))
+                .collect(Collectors.toList());
+
+        // 2. 改变采购单的状态为已领取
+        this.updateBatchById(purchaseEntityList);
+
+        // 3. 改变采购需求为正在采购
+        purchaseEntityList.forEach(purchaseEntity -> {
+            List<PurchaseDetailEntity> purchaseDetailEntityList = purchaseDetailService.listDetailByPurchaseId(purchaseEntity.getId());
+            List<PurchaseDetailEntity> collect = purchaseDetailEntityList.stream().map(purchaseDetailEntity -> PurchaseDetailEntity.builder()
+                    .id(purchaseDetailEntity.getId()).status(WareConstant.PurchaseDetailEnum.BUYING.getCode()).build()).collect(Collectors.toList());
+            purchaseDetailService.updateBatchById(collect);
+        });
     }
 
 }
