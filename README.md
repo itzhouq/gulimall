@@ -3882,4 +3882,17 @@ VO 也可以解释成 View Object 视图对象。用于接受页面传递来的�
 
 ---
 
+### 4、平台属性
+
+- 获取属性分组的关联的所有属性：https://easydoc.xyz/doc/75716633/ZUqEdvA4/LnjzZHPj
+- 删除属性与分组的关联关系：https://easydoc.xyz/doc/75716633/ZUqEdvA4/qn7A2Fht
+
+### 5、新增商品
+
+。。。
+
+
+
+
+
 
