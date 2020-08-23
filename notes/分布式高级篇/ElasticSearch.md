@@ -1525,4 +1525,288 @@ GET bank/_search
 
 ##  Aggregation 执行聚合
 
+聚合提供了从数据中分组和提取数据的能力。最简单的聚合方法大致等于SQL Group by和SQL聚合函数。在elasticsearch中，执行搜索返回this（命中结果），并且同时返回聚合结果，把以响应中的所有hits（命中结果）分隔开的能力。这是非常强大且有效的，你可以执行查询和多个聚合，并且在一次使用中得到各自的（任何一个的）返回结果，使用一次简洁和简化的API啦避免网络往返。
+
+"size":0
+
+size:0不显示搜索数据 aggs：执行聚合。聚合语法如下：
+
+```shell
+"aggs":{
+    "aggs_name这次聚合的名字，方便展示在结果集中":{
+        "AGG_TYPE聚合的类型(avg,term,terms)":{}
+     }
+}
+```
+
+参考文档：https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-avg-aggregation.html
+
+### 搜索address中包含mill的所有人的年龄分布以及平均年龄，但不显示这些人的详情
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "match": {
+      "address": "Mill"
+    }
+  },
+  "aggs": {
+    "ageAgg": {
+      "terms": {
+        "field": "age",
+        "size": 10
+      }
+    },
+    "ageAvg": {
+      "avg": {
+        "field": "age"
+      }
+    },
+    "balanceAvg": {
+      "avg": {
+        "field": "balance"
+      }
+    }
+  },
+  "size": 0
+}
+```
+
+结果：
+
+```json
+{
+  "took" : 16,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 4,
+      "relation" : "eq"
+    },
+    "max_score" : null,
+    "hits" : [ ]
+  },
+  "aggregations" : {
+    "ageAgg" : {
+      "doc_count_error_upper_bound" : 0,
+      "sum_other_doc_count" : 0,
+      "buckets" : [
+        {
+          "key" : 38,
+          "doc_count" : 2
+        },
+        {
+          "key" : 28,
+          "doc_count" : 1
+        },
+        {
+          "key" : 32,
+          "doc_count" : 1
+        }
+      ]
+    },
+    "ageAvg" : {
+      "value" : 34.0
+    },
+    "balanceAvg" : {
+      "value" : 25208.0
+    }
+  }
+}
+```
+
+
+
+### 复杂： 按照年龄聚合，并且求这些年龄段的这些人的平均薪资
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "aggs": {
+    "ageAgg": {
+      "terms": {
+        "field": "age",
+        "size": 100
+      },
+      "aggs": {
+        "ageAvg": {
+          "avg": {
+            "field": "balance"
+          }
+        }
+      }
+    }
+  },
+  "size": 0
+}
+```
+
+结果：
+
+```json
+{
+  "took" : 6,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1000,
+      "relation" : "eq"
+    },
+    "max_score" : null,
+    "hits" : [ ]
+  },
+  "aggregations" : {
+    "ageAgg" : {
+      "doc_count_error_upper_bound" : 0,
+      "sum_other_doc_count" : 463,
+      "buckets" : [
+        {
+          "key" : 31,
+          "doc_count" : 61,
+          "ageAvg" : {
+            "value" : 28312.918032786885
+          }
+        },
+        {
+          "key" : 39,
+          "doc_count" : 60,
+          "ageAvg" : {
+            "value" : 25269.583333333332
+          }
+        },
+        {
+          "key" : 26,
+          "doc_count" : 59,
+          "ageAvg" : {
+            "value" : 23194.813559322032
+          }
+        },
+        {
+          "key" : 32,
+          "doc_count" : 52,
+          "ageAvg" : {
+            "value" : 23951.346153846152
+          }
+        },
+        {
+          "key" : 35,
+          "doc_count" : 52,
+          "ageAvg" : {
+            "value" : 22136.69230769231
+          }
+        },
+        {
+          "key" : 36,
+          "doc_count" : 52,
+          "ageAvg" : {
+            "value" : 22174.71153846154
+          }
+        },
+        {
+          "key" : 22,
+          "doc_count" : 51,
+          "ageAvg" : {
+            "value" : 24731.07843137255
+          }
+        },
+        {
+          "key" : 28,
+          "doc_count" : 51,
+          "ageAvg" : {
+            "value" : 28273.882352941175
+          }
+        },
+        {
+          "key" : 33,
+          "doc_count" : 50,
+          "ageAvg" : {
+            "value" : 25093.94
+          }
+        },
+        {
+          "key" : 34,
+          "doc_count" : 49,
+          "ageAvg" : {
+            "value" : 26809.95918367347
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+
+
+### 查出所有年龄分布，并且这些年龄段中M的平均薪资和F的平均薪资以及这个年龄段的总体平均薪资
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "aggs": {
+    "ageAgg": {
+      "terms": {
+        "field": "age",
+        "size": 10
+      },
+      "aggs": {
+        "genderAgg": {
+          "terms": {
+            "field": "gender.keyword"
+          },
+          "aggs": {
+            "balanceAvg": {
+              "avg": {
+                "field": "balance"
+              }
+            }
+          }
+        },
+        "ageBalanceAvg": {
+          "avg": {
+            "field": "balance"
+          }
+        }
+      }
+    }
+  },
+  "size": 0
+}
+```
+
+结果：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823164516.png)
+
+
+
+---
+
+
+
+
+
+
+
+
+
 
