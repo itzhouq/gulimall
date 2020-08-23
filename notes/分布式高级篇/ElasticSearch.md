@@ -709,4 +709,129 @@ yellow open customer                 BmLPdrUyS42Wb_Szwp6N2A 1 1    2 0   3.5kb  
 
 ## 检索进阶
 
+### 1、SearchAPI
+
+**ES 所有查询语法都可以在官方文档中看到**：https://www.elastic.co/guide/en/elasticsearch/reference/current/getting-started-search.html
+
+
+
+ES 支持两种基本方式检索：
+
+- 一个是通过使用 REST request URI 发送所有参数（uri + 检索参数）
+- 另一个是通过 REST request body 来发哦是哪个他们（uri + 请求体）
+
+实例：
+
+#### 使用 REST request URI 方式
+
+```shell
+GET bank/_search?q=*&sort=account_number:asc
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823140738.png)
+
+ES 默认会分页查询 10 条数据。
+
+结果中的字段含义可以看文档。
+
+The response also provides the following information about the search request:
+
+- `took` – how long it took Elasticsearch to run the query, in milliseconds
+- `timed_out` – whether or not the search request timed out
+- `_shards` – how many shards were searched and a breakdown of how many shards succeeded, failed, or were skipped.
+- `max_score` – the score of the most relevant document found
+- `hits.total.value` - how many matching documents were found
+- `hits.sort` - the document’s sort position (when not sorting by relevance score)
+- `hits._score` - the document’s relevance score (not applicable when using `match_all`)
+
+#### Query DSL基本语法
+
+Elasticsearch提供了一个可以执行查询的Json风格的DSL。这个被称为Query DSL，该查询语言非常全面。
+
+```shell
+GET /bank/_search
+{
+  "query": { "match_all": {} },
+  "sort": [
+    { "account_number": "asc" }
+  ]
+}
+```
+
+- 基本语法
+
+```shell
+QUERY_NAME:{
+   ARGUMENT:VALUE,
+   ARGUMENT:VALUE,...
+}
+```
+
+- 如果针对于某个字段，那么它的结构如下：
+
+```json
+{
+  QUERY_NAME:{
+     FIELD_NAME:{
+       ARGUMENT:VALUE,
+       ARGUMENT:VALUE,...
+      }   
+   }
+}
+```
+
+```json
+GET bank/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "from": 0,
+  "size": 5,
+  "sort": [
+    {
+      "account_number": {
+        "order": "desc"
+      }
+    }
+  ]
+}
+```
+
+- query定义如何查询；
+  - match_all查询类型【代表查询所有的所有】，es中可以在query中组合非常多的查询类型完成复杂查询；
+  - 除了query参数之外，我们可也传递其他的参数以改变查询结果，如sort，size；
+  - from+size限定，完成分页功能；
+  - sort排序，多字段排序，会在前序字段相等时后续字段内部排序，否则以前序为准；
+
+- 返回部分字段
+
+```json
+GET bank/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "from": 0,
+  "size": 5,
+  "sort": [
+    {
+      "account_number": {
+        "order": "desc"
+      }
+    }
+  ],
+  "_source": ["balance","firstname"]
+  
+}
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823142310.png)
+
+---
+
+
+
+### 2、Query DSL 
+
 
