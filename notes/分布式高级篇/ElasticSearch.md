@@ -292,6 +292,81 @@ green open .kibana_1                AyRIt6NsTIqA8IOLDMPiYw 1 0 8 0 25.3kb 25.3kb
 
 
 
-### 2、索引一个文档
+### 2、索引一个文档(保存)
+
+保存一个数据，保存在哪个索引的哪个类型下，指定用那个唯一标识 PUT customer/external/1;在customer索引下的external类型下保存1号数据为：
+
+```shell
+http://47.96.30.109:9200/customer/external/1
+```
+
+```shell
+{
+ "name":"John Doe"
+}
+```
+
+PUT和POST都可以 POST新增。如果不指定id，会自动生成id。指定id就会修改这个数据，并新增版本号； PUT可以新增也可以修改。PUT必须指定id；由于PUT需要指定id，我们一般用来做修改操作，不指定id会报错。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823094907.png)
+
+创建数据成功后，显示201 created表示插入记录成功。
+
+```json
+{
+    "_index": "customer",
+    "_type": "external",
+    "_id": "1",
+    "_version": 1,
+    "result": "created",
+    "_shards": {
+        "total": 2,
+        "successful": 1,
+        "failed": 0
+    },
+    "_seq_no": 0,
+    "_primary_term": 1
+}
+```
+
+这些返回的JSON串的含义；这些带有下划线开头的，称为元数据，反映了当前的基本信息。
+
+"_index": "customer" 表明该数据在哪个数据库下；
+
+"_type": "external" 表明该数据在哪个类型下；
+
+"_id": "1" 表明被保存数据的id；
+
+"_version": 1, 被保存数据的版本
+
+"result": "created" 这里是创建了一条数据，如果重新put一条数据，则该状态会变为updated，并且版本号也会发生变化。
+
+
+
+如果使用 POST 方式保存：
+
+1. 添加数据的时候，指定ID，会使用该id，并且类型是新增：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823095427.png)
+
+2. 再次使用POST插入数据，类型为updated
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823095505.png)
+
+3. 添加数据的时候，不指定ID，会自动的生成id，并且类型是新增：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823095549.png)
+
+4. 再次使用POST插入数据，仍然是新增的，ID不同
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823095633.png)
+
+---
+
+### 3、查看文档
+
+
+
+
 
 
