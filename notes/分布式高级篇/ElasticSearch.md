@@ -1031,6 +1031,44 @@ GET bank/_search
 }
 ```
 
+文本字段的匹配，使用也可以使用 match.keyword，匹配的条件就是要显示字段的全部值，要进行精确匹配的。
+
+match_phrase是做短语匹配，只要文本中包含匹配条件，就能匹配到。
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "match": {
+      "address.keyword": "mill road"
+    }
+  }
+}
+```
+
+address 如果没有精准匹配【整个字段的全部值】就查询不到。
+
+```json
+{
+  "took" : 2,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 0,
+      "relation" : "eq"
+    },
+    "max_score" : null,
+    "hits" : [ ]
+  }
+}
+```
+
 
 
 #### multi_math多字段匹配
@@ -1417,6 +1455,74 @@ GET bank/_search
 
 #### Term 查询
 
+和match一样。匹配某个属性的值。全文检索字段用match，其他非text字段匹配用term。
 
+> Avoid using the `term` query for [`text`](https://www.elastic.co/guide/en/elasticsearch/reference/7.6/text.html) fields.
+>
+> 避免对文本字段使用“term”查询
+>
+> By default, Elasticsearch changes the values of `text` fields as part of [analysis](https://gitee.com/cosmoswong/markdownblog/blob/master/谷粒商城/谷粒商城—分布式高级.md). This can make finding exact matches for `text` field values difficult.
+>
+> 默认情况下，Elasticsearch作为[analysis](https://gitee.com/cosmoswong/markdownblog/blob/master/谷粒商城/谷粒商城—分布式高级.md)的一部分更改' text '字段的值。这使得为“text”字段值寻找精确匹配变得困难。
+>
+> To search `text` field values, use the match.
+>
+> 要搜索“text”字段值，请使用匹配。
+>
+> https://www.elastic.co/guide/en/elasticsearch/reference/7.6/query-dsl-term-query.html
+
+- 使用 term 匹配查询
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "term": {
+      "address": "mill Road"
+    }
+  }
+}
+```
+
+结果：
+
+```json
+{
+  "took" : 0,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 0,
+      "relation" : "eq"
+    },
+    "max_score" : null,
+    "hits" : [ ]
+  }
+}
+```
+
+一条文档也没有。
+
+- 使用 match 匹配
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823154300.png)
+
+能查到 32 条记录。
+
+**全文检索字段用match，其他非text字段匹配用term**。
+
+
+
+---
+
+
+
+##  Aggregation 执行聚合
 
 
