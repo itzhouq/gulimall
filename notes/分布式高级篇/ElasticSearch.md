@@ -429,4 +429,65 @@ GET http://47.96.30.109:9200/customer/external/1
 
 ### 4、更新文档
 
+语法：
 
+```json
+POST customer/external/1/_update
+{
+  "doc":{
+    "name":"Join Doew"
+  }
+}
+```
+
+或者
+
+```json
+POST customer/external/1
+{
+  "name":"Join Doew"
+}
+```
+
+或者：
+
+```joon
+PUT customer/external/1
+{
+  "name":"Join Doew"
+}
+```
+
+- POST 操作会对比源文档数据，如果相同不会有什么操作，文档 version 不增加。PUT 操作总会将数据重新保存并增加 version 版本。
+- 带_update 对比元数据如果一样就不进行任何操作。
+- 看场景
+  - 对于大并发更新，不带 update
+  - 对于大并发查询偶尔更新，带 update；对比更新，重新计算分配规则。
+
+- 更新同时增加属性
+
+
+
+- POST更新文档，带有_update
+
+http://47.96.30.109:9200/customer/external/1/_update
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823104126.png)
+
+如果再次执行更新，则不执行任何操作，序列号也不发生变化
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823104210.png)
+
+POST更新方式，会对比原来的数据，和原来的相同，则不执行任何操作（version和_seq_no）都不变。
+
+- POST或者PUT更新文档，不带_update
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823104410.png)
+
+在更新过程中，重复执行更新操作，数据也能够更新成功，不会和原来的数据进行对比。
+
+---
+
+
+
+### 5、删除文档或索引
