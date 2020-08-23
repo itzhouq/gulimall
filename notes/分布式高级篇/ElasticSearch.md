@@ -832,6 +832,329 @@ GET bank/_search
 
 
 
-### 2、Query DSL 
+### 2、Query DSL
+
+#### match匹配查询
+
+- 基本类型（非字符串），精确控制
+
+```shell
+GET /bank/_search
+{
+  "query": {
+    "match": {
+      "account_number": 20
+    }
+  }
+}
+```
+
+match返回account_number=20的数据。结果：
+
+```json
+{
+  "took" : 6,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1,
+      "relation" : "eq"
+    },
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "20",
+        "_score" : 1.0,
+        "_source" : {
+          "account_number" : 20,
+          "balance" : 16418,
+          "firstname" : "Elinor",
+          "lastname" : "Ratliff",
+          "age" : 36,
+          "gender" : "M",
+          "address" : "282 Kings Place",
+          "employer" : "Scentric",
+          "email" : "elinorratliff@scentric.com",
+          "city" : "Ribera",
+          "state" : "WA"
+        }
+      }
+    ]
+  }
+}
+```
+
+
+
+- 字符串，全文检索
+
+```shell
+GET /bank/_search
+{
+  "query": {
+    "match": {
+      "address": "Kings Street"
+    }
+  }
+}
+```
+
+全文检索，最终会按照评分进行排序，会对检索条件进行分词匹配。结果：
+
+```json
+{
+  "took" : 17,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 387,
+      "relation" : "eq"
+    },
+    "max_score" : 5.9908285,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "20",
+        "_score" : 5.9908285,
+        "_source" : {
+          "account_number" : 20,
+          "balance" : 16418,
+          "firstname" : "Elinor",
+          "lastname" : "Ratliff",
+          "age" : 36,
+          "gender" : "M",
+          "address" : "282 Kings Place",
+          "employer" : "Scentric",
+          "email" : "elinorratliff@scentric.com",
+          "city" : "Ribera",
+          "state" : "WA"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "107",
+        "_score" : 0.95395315,
+        "_source" : {
+          "account_number" : 107,
+          "balance" : 48844,
+          "firstname" : "Randi",
+          "lastname" : "Rich",
+          "age" : 28,
+          "gender" : "M",
+          "address" : "694 Jefferson Street",
+          "employer" : "Netplax",
+          "email" : "randirich@netplax.com",
+          "city" : "Bellfountain",
+          "state" : "SC"
+        }
+      }, {...}
+    ]
+  }
+}
+```
+
+
+
+---
+
+#### match_phrase 短句匹配
+
+将需要匹配的值当成一整个单词（不分词）进行检索
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "match_phrase": {
+      "address": "mill road"
+    }
+  }
+}
+```
+
+查处address中包含mill_road的所有记录，并给出相关性得分。结果：
+
+```json
+{
+  "took" : 21,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1,
+      "relation" : "eq"
+    },
+    "max_score" : 8.926605,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "970",
+        "_score" : 8.926605,
+        "_source" : {
+          "account_number" : 970,
+          "balance" : 19648,
+          "firstname" : "Forbes",
+          "lastname" : "Wallace",
+          "age" : 28,
+          "gender" : "M",
+          "address" : "990 Mill Road",
+          "employer" : "Pheast",
+          "email" : "forbeswallace@pheast.com",
+          "city" : "Lopezo",
+          "state" : "AK"
+        }
+      }
+    ]
+  }
+}
+```
+
+
+
+#### multi_math多字段匹配
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "mill movico",
+      "fields": ["address", "city"]
+    }
+  }
+}
+```
+
+"address"或 "city" 属性包含"mill" 或 "movico" 都可以被查询到。查询过程中，会对于查询条件进行分词。结果：
+
+```json
+{
+  "took" : 4,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 4,
+      "relation" : "eq"
+    },
+    "max_score" : 6.505949,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "472",
+        "_score" : 6.505949,
+        "_source" : {
+          "account_number" : 472,
+          "balance" : 25571,
+          "firstname" : "Lee",
+          "lastname" : "Long",
+          "age" : 32,
+          "gender" : "F",
+          "address" : "288 Mill Street",
+          "employer" : "Comverges",
+          "email" : "leelong@comverges.com",
+          "city" : "Movico",
+          "state" : "MT"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "970",
+        "_score" : 5.4032025,
+        "_source" : {
+          "account_number" : 970,
+          "balance" : 19648,
+          "firstname" : "Forbes",
+          "lastname" : "Wallace",
+          "age" : 28,
+          "gender" : "M",
+          "address" : "990 Mill Road",
+          "employer" : "Pheast",
+          "email" : "forbeswallace@pheast.com",
+          "city" : "Lopezo",
+          "state" : "AK"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "136",
+        "_score" : 5.4032025,
+        "_source" : {
+          "account_number" : 136,
+          "balance" : 45801,
+          "firstname" : "Winnie",
+          "lastname" : "Holland",
+          "age" : 38,
+          "gender" : "M",
+          "address" : "198 Mill Lane",
+          "employer" : "Neteria",
+          "email" : "winnieholland@neteria.com",
+          "city" : "Urie",
+          "state" : "IL"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "345",
+        "_score" : 5.4032025,
+        "_source" : {
+          "account_number" : 345,
+          "balance" : 9812,
+          "firstname" : "Parker",
+          "lastname" : "Hines",
+          "age" : 38,
+          "gender" : "M",
+          "address" : "715 Mill Avenue",
+          "employer" : "Baluba",
+          "email" : "parkerhines@baluba.com",
+          "city" : "Blackgum",
+          "state" : "KY"
+        }
+      }
+    ]
+  }
+}
+```
+
+
+
+---
+
+
+
+#### bool 复合查询
+
+
 
 
