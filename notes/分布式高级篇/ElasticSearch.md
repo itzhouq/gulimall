@@ -1155,6 +1155,149 @@ GET bank/_search
 
 #### bool 复合查询
 
+复合语句可以合并，任何其他查询语句，包括符合语句。这也就意味着，复合语句之间 可以互相嵌套，可以表达非常复杂的逻辑。
+
+must：必须达到must所列举的所有条件。
+
+```shell
+GET bank/_search
+{
+   "query":{
+        "bool":{
+             "must":[
+              {"match":{"address":"mill"}},
+              {"match":{"gender":"M"}}
+             ]
+         }
+    }
+}
+```
+
+must_not，必须不匹配must_not所列举的所有条件。
+
+should，应该满足should所列举的条件。如果没有满足也能查询出来，只不过得分会降低。
+
+- 匹配 gender 必须是M， address 必须包含 "mill"，age必须不是 18的，lastname 最好是 "Wallace" 的文档。
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {
+          "gender": "M"
+        }},
+        {"match": {
+          "address": "mill"
+        }}
+      ],
+      "must_not": [
+        {"match": {
+          "age": 18
+        }}
+      ],
+      "should": [
+        {"match": {
+          "lastname": "Wallace"
+        }}
+      ]
+    }
+  }
+}
+```
+
+结果：
+
+```json
+{
+  "took" : 19,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 3,
+      "relation" : "eq"
+    },
+    "max_score" : 12.585751,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "970",
+        "_score" : 12.585751,
+        "_source" : {
+          "account_number" : 970,
+          "balance" : 19648,
+          "firstname" : "Forbes",
+          "lastname" : "Wallace",
+          "age" : 28,
+          "gender" : "M",
+          "address" : "990 Mill Road",
+          "employer" : "Pheast",
+          "email" : "forbeswallace@pheast.com",
+          "city" : "Lopezo",
+          "state" : "AK"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "136",
+        "_score" : 6.0824604,
+        "_source" : {
+          "account_number" : 136,
+          "balance" : 45801,
+          "firstname" : "Winnie",
+          "lastname" : "Holland",
+          "age" : 38,
+          "gender" : "M",
+          "address" : "198 Mill Lane",
+          "employer" : "Neteria",
+          "email" : "winnieholland@neteria.com",
+          "city" : "Urie",
+          "state" : "IL"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "345",
+        "_score" : 6.0824604,
+        "_source" : {
+          "account_number" : 345,
+          "balance" : 9812,
+          "firstname" : "Parker",
+          "lastname" : "Hines",
+          "age" : 38,
+          "gender" : "M",
+          "address" : "715 Mill Avenue",
+          "employer" : "Baluba",
+          "email" : "parkerhines@baluba.com",
+          "city" : "Blackgum",
+          "state" : "KY"
+        }
+      }
+    ]
+  }
+}
+```
+
+可以看到在其他条件相同的情况下匹配到should的文档得分较高。
+
+---
+
+
+
+#### Filter 结果过滤
+
+
+
 
 
 
