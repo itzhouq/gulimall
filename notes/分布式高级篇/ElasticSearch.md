@@ -1296,7 +1296,126 @@ GET bank/_search
 
 #### Filter 结果过滤
 
+并不是所有的查询都需要产生分数，特别是哪些仅用于filtering过滤的文档。为了不计算分数，elasticsearch会自动检查场景并且优化查询的执行。
 
+filter 的用法和 must_not 相同，但是 filter 不会贡献得分。
+
+- 查询年龄在 18 到 30 之间的文档
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "bool": {
+      "filter": {
+        "range": {
+          "age": {
+            "gte": 18,
+            "lte": 30
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+结果：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823152957.png)
+
+可以看到查到的分数都为0。
+
+
+
+filter 也可以在匹配之后再次过滤。比如在上面的查询结果最后再加上过滤条件。
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {
+          "gender": "M"
+        }},
+        {"match": {
+          "address": "mill"
+        }}
+      ],
+      "must_not": [
+        {"match": {
+          "age": 18
+        }}
+      ],
+      "should": [
+        {"match": {
+          "lastname": "Wallace"
+        }}
+      ],
+      "filter": {
+        "range": {
+          "age": {
+            "gte": 10,
+            "lte": 30
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+结果：
+
+```json
+{
+  "took" : 4,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1,
+      "relation" : "eq"
+    },
+    "max_score" : 12.585751,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "970",
+        "_score" : 12.585751,
+        "_source" : {
+          "account_number" : 970,
+          "balance" : 19648,
+          "firstname" : "Forbes",
+          "lastname" : "Wallace",
+          "age" : 28,
+          "gender" : "M",
+          "address" : "990 Mill Road",
+          "employer" : "Pheast",
+          "email" : "forbeswallace@pheast.com",
+          "city" : "Lopezo",
+          "state" : "AK"
+        }
+      }
+    ]
+  }
+}
+```
+
+将结果从 3 条过滤剩下一条，但是对得分没有影响。
+
+
+
+---
+
+#### Term 查询
 
 
 
