@@ -709,4 +709,1440 @@ yellow open customer                 BmLPdrUyS42Wb_Szwp6N2A 1 1    2 0   3.5kb  
 
 ## 检索进阶
 
+### 1、SearchAPI
+
+**ES 所有查询语法都可以在官方文档中看到**：https://www.elastic.co/guide/en/elasticsearch/reference/current/getting-started-search.html
+
+
+
+ES 支持两种基本方式检索：
+
+- 一个是通过使用 REST request URI 发送所有参数（uri + 检索参数）
+- 另一个是通过 REST request body 来发哦是哪个他们（uri + 请求体）
+
+实例：
+
+#### 使用 REST request URI 方式
+
+```shell
+GET bank/_search?q=*&sort=account_number:asc
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823140738.png)
+
+ES 默认会分页查询 10 条数据。
+
+结果中的字段含义可以看文档。
+
+The response also provides the following information about the search request:
+
+- `took` – how long it took Elasticsearch to run the query, in milliseconds
+- `timed_out` – whether or not the search request timed out
+- `_shards` – how many shards were searched and a breakdown of how many shards succeeded, failed, or were skipped.
+- `max_score` – the score of the most relevant document found
+- `hits.total.value` - how many matching documents were found
+- `hits.sort` - the document’s sort position (when not sorting by relevance score)
+- `hits._score` - the document’s relevance score (not applicable when using `match_all`)
+
+#### Query DSL基本语法
+
+Elasticsearch提供了一个可以执行查询的Json风格的DSL。这个被称为Query DSL，该查询语言非常全面。
+
+```shell
+GET /bank/_search
+{
+  "query": { "match_all": {} },
+  "sort": [
+    { "account_number": "asc" }
+  ]
+}
+```
+
+- 基本语法
+
+```shell
+QUERY_NAME:{
+   ARGUMENT:VALUE,
+   ARGUMENT:VALUE,...
+}
+```
+
+- 如果针对于某个字段，那么它的结构如下：
+
+```json
+{
+  QUERY_NAME:{
+     FIELD_NAME:{
+       ARGUMENT:VALUE,
+       ARGUMENT:VALUE,...
+      }   
+   }
+}
+```
+
+```json
+GET bank/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "from": 0,
+  "size": 5,
+  "sort": [
+    {
+      "account_number": {
+        "order": "desc"
+      }
+    }
+  ]
+}
+```
+
+- query定义如何查询；
+  - match_all查询类型【代表查询所有的所有】，es中可以在query中组合非常多的查询类型完成复杂查询；
+  - 除了query参数之外，我们可也传递其他的参数以改变查询结果，如sort，size；
+  - from+size限定，完成分页功能；
+  - sort排序，多字段排序，会在前序字段相等时后续字段内部排序，否则以前序为准；
+
+- 返回部分字段
+
+```json
+GET bank/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "from": 0,
+  "size": 5,
+  "sort": [
+    {
+      "account_number": {
+        "order": "desc"
+      }
+    }
+  ],
+  "_source": ["balance","firstname"]
+  
+}
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823142310.png)
+
+---
+
+
+
+### 2、Query DSL
+
+#### match匹配查询
+
+- 基本类型（非字符串），精确控制
+
+```shell
+GET /bank/_search
+{
+  "query": {
+    "match": {
+      "account_number": 20
+    }
+  }
+}
+```
+
+match返回account_number=20的数据。结果：
+
+```json
+{
+  "took" : 6,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1,
+      "relation" : "eq"
+    },
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "20",
+        "_score" : 1.0,
+        "_source" : {
+          "account_number" : 20,
+          "balance" : 16418,
+          "firstname" : "Elinor",
+          "lastname" : "Ratliff",
+          "age" : 36,
+          "gender" : "M",
+          "address" : "282 Kings Place",
+          "employer" : "Scentric",
+          "email" : "elinorratliff@scentric.com",
+          "city" : "Ribera",
+          "state" : "WA"
+        }
+      }
+    ]
+  }
+}
+```
+
+
+
+- 字符串，全文检索
+
+```shell
+GET /bank/_search
+{
+  "query": {
+    "match": {
+      "address": "Kings Street"
+    }
+  }
+}
+```
+
+全文检索，最终会按照评分进行排序，会对检索条件进行分词匹配。结果：
+
+```json
+{
+  "took" : 17,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 387,
+      "relation" : "eq"
+    },
+    "max_score" : 5.9908285,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "20",
+        "_score" : 5.9908285,
+        "_source" : {
+          "account_number" : 20,
+          "balance" : 16418,
+          "firstname" : "Elinor",
+          "lastname" : "Ratliff",
+          "age" : 36,
+          "gender" : "M",
+          "address" : "282 Kings Place",
+          "employer" : "Scentric",
+          "email" : "elinorratliff@scentric.com",
+          "city" : "Ribera",
+          "state" : "WA"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "107",
+        "_score" : 0.95395315,
+        "_source" : {
+          "account_number" : 107,
+          "balance" : 48844,
+          "firstname" : "Randi",
+          "lastname" : "Rich",
+          "age" : 28,
+          "gender" : "M",
+          "address" : "694 Jefferson Street",
+          "employer" : "Netplax",
+          "email" : "randirich@netplax.com",
+          "city" : "Bellfountain",
+          "state" : "SC"
+        }
+      }, {...}
+    ]
+  }
+}
+```
+
+
+
+---
+
+#### match_phrase 短句匹配
+
+将需要匹配的值当成一整个单词（不分词）进行检索
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "match_phrase": {
+      "address": "mill road"
+    }
+  }
+}
+```
+
+查处address中包含mill_road的所有记录，并给出相关性得分。结果：
+
+```json
+{
+  "took" : 21,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1,
+      "relation" : "eq"
+    },
+    "max_score" : 8.926605,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "970",
+        "_score" : 8.926605,
+        "_source" : {
+          "account_number" : 970,
+          "balance" : 19648,
+          "firstname" : "Forbes",
+          "lastname" : "Wallace",
+          "age" : 28,
+          "gender" : "M",
+          "address" : "990 Mill Road",
+          "employer" : "Pheast",
+          "email" : "forbeswallace@pheast.com",
+          "city" : "Lopezo",
+          "state" : "AK"
+        }
+      }
+    ]
+  }
+}
+```
+
+文本字段的匹配，使用也可以使用 match.keyword，匹配的条件就是要显示字段的全部值，要进行精确匹配的。
+
+match_phrase是做短语匹配，只要文本中包含匹配条件，就能匹配到。
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "match": {
+      "address.keyword": "mill road"
+    }
+  }
+}
+```
+
+address 如果没有精准匹配【整个字段的全部值】就查询不到。
+
+```json
+{
+  "took" : 2,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 0,
+      "relation" : "eq"
+    },
+    "max_score" : null,
+    "hits" : [ ]
+  }
+}
+```
+
+
+
+#### multi_math多字段匹配
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "mill movico",
+      "fields": ["address", "city"]
+    }
+  }
+}
+```
+
+"address"或 "city" 属性包含"mill" 或 "movico" 都可以被查询到。查询过程中，会对于查询条件进行分词。结果：
+
+```json
+{
+  "took" : 4,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 4,
+      "relation" : "eq"
+    },
+    "max_score" : 6.505949,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "472",
+        "_score" : 6.505949,
+        "_source" : {
+          "account_number" : 472,
+          "balance" : 25571,
+          "firstname" : "Lee",
+          "lastname" : "Long",
+          "age" : 32,
+          "gender" : "F",
+          "address" : "288 Mill Street",
+          "employer" : "Comverges",
+          "email" : "leelong@comverges.com",
+          "city" : "Movico",
+          "state" : "MT"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "970",
+        "_score" : 5.4032025,
+        "_source" : {
+          "account_number" : 970,
+          "balance" : 19648,
+          "firstname" : "Forbes",
+          "lastname" : "Wallace",
+          "age" : 28,
+          "gender" : "M",
+          "address" : "990 Mill Road",
+          "employer" : "Pheast",
+          "email" : "forbeswallace@pheast.com",
+          "city" : "Lopezo",
+          "state" : "AK"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "136",
+        "_score" : 5.4032025,
+        "_source" : {
+          "account_number" : 136,
+          "balance" : 45801,
+          "firstname" : "Winnie",
+          "lastname" : "Holland",
+          "age" : 38,
+          "gender" : "M",
+          "address" : "198 Mill Lane",
+          "employer" : "Neteria",
+          "email" : "winnieholland@neteria.com",
+          "city" : "Urie",
+          "state" : "IL"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "345",
+        "_score" : 5.4032025,
+        "_source" : {
+          "account_number" : 345,
+          "balance" : 9812,
+          "firstname" : "Parker",
+          "lastname" : "Hines",
+          "age" : 38,
+          "gender" : "M",
+          "address" : "715 Mill Avenue",
+          "employer" : "Baluba",
+          "email" : "parkerhines@baluba.com",
+          "city" : "Blackgum",
+          "state" : "KY"
+        }
+      }
+    ]
+  }
+}
+```
+
+
+
+---
+
+
+
+#### bool 复合查询
+
+复合语句可以合并，任何其他查询语句，包括符合语句。这也就意味着，复合语句之间 可以互相嵌套，可以表达非常复杂的逻辑。
+
+must：必须达到must所列举的所有条件。
+
+```shell
+GET bank/_search
+{
+   "query":{
+        "bool":{
+             "must":[
+              {"match":{"address":"mill"}},
+              {"match":{"gender":"M"}}
+             ]
+         }
+    }
+}
+```
+
+must_not，必须不匹配must_not所列举的所有条件。
+
+should，应该满足should所列举的条件。如果没有满足也能查询出来，只不过得分会降低。
+
+- 匹配 gender 必须是M， address 必须包含 "mill"，age必须不是 18的，lastname 最好是 "Wallace" 的文档。
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {
+          "gender": "M"
+        }},
+        {"match": {
+          "address": "mill"
+        }}
+      ],
+      "must_not": [
+        {"match": {
+          "age": 18
+        }}
+      ],
+      "should": [
+        {"match": {
+          "lastname": "Wallace"
+        }}
+      ]
+    }
+  }
+}
+```
+
+结果：
+
+```json
+{
+  "took" : 19,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 3,
+      "relation" : "eq"
+    },
+    "max_score" : 12.585751,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "970",
+        "_score" : 12.585751,
+        "_source" : {
+          "account_number" : 970,
+          "balance" : 19648,
+          "firstname" : "Forbes",
+          "lastname" : "Wallace",
+          "age" : 28,
+          "gender" : "M",
+          "address" : "990 Mill Road",
+          "employer" : "Pheast",
+          "email" : "forbeswallace@pheast.com",
+          "city" : "Lopezo",
+          "state" : "AK"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "136",
+        "_score" : 6.0824604,
+        "_source" : {
+          "account_number" : 136,
+          "balance" : 45801,
+          "firstname" : "Winnie",
+          "lastname" : "Holland",
+          "age" : 38,
+          "gender" : "M",
+          "address" : "198 Mill Lane",
+          "employer" : "Neteria",
+          "email" : "winnieholland@neteria.com",
+          "city" : "Urie",
+          "state" : "IL"
+        }
+      },
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "345",
+        "_score" : 6.0824604,
+        "_source" : {
+          "account_number" : 345,
+          "balance" : 9812,
+          "firstname" : "Parker",
+          "lastname" : "Hines",
+          "age" : 38,
+          "gender" : "M",
+          "address" : "715 Mill Avenue",
+          "employer" : "Baluba",
+          "email" : "parkerhines@baluba.com",
+          "city" : "Blackgum",
+          "state" : "KY"
+        }
+      }
+    ]
+  }
+}
+```
+
+可以看到在其他条件相同的情况下匹配到should的文档得分较高。
+
+---
+
+
+
+#### Filter 结果过滤
+
+并不是所有的查询都需要产生分数，特别是哪些仅用于filtering过滤的文档。为了不计算分数，elasticsearch会自动检查场景并且优化查询的执行。
+
+filter 的用法和 must_not 相同，但是 filter 不会贡献得分。
+
+- 查询年龄在 18 到 30 之间的文档
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "bool": {
+      "filter": {
+        "range": {
+          "age": {
+            "gte": 18,
+            "lte": 30
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+结果：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823152957.png)
+
+可以看到查到的分数都为0。
+
+
+
+filter 也可以在匹配之后再次过滤。比如在上面的查询结果最后再加上过滤条件。
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {
+          "gender": "M"
+        }},
+        {"match": {
+          "address": "mill"
+        }}
+      ],
+      "must_not": [
+        {"match": {
+          "age": 18
+        }}
+      ],
+      "should": [
+        {"match": {
+          "lastname": "Wallace"
+        }}
+      ],
+      "filter": {
+        "range": {
+          "age": {
+            "gte": 10,
+            "lte": 30
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+结果：
+
+```json
+{
+  "took" : 4,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1,
+      "relation" : "eq"
+    },
+    "max_score" : 12.585751,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account",
+        "_id" : "970",
+        "_score" : 12.585751,
+        "_source" : {
+          "account_number" : 970,
+          "balance" : 19648,
+          "firstname" : "Forbes",
+          "lastname" : "Wallace",
+          "age" : 28,
+          "gender" : "M",
+          "address" : "990 Mill Road",
+          "employer" : "Pheast",
+          "email" : "forbeswallace@pheast.com",
+          "city" : "Lopezo",
+          "state" : "AK"
+        }
+      }
+    ]
+  }
+}
+```
+
+将结果从 3 条过滤剩下一条，但是对得分没有影响。
+
+
+
+---
+
+#### Term 查询
+
+和match一样。匹配某个属性的值。全文检索字段用match，其他非text字段匹配用term。
+
+> Avoid using the `term` query for [`text`](https://www.elastic.co/guide/en/elasticsearch/reference/7.6/text.html) fields.
+>
+> 避免对文本字段使用“term”查询
+>
+> By default, Elasticsearch changes the values of `text` fields as part of [analysis](https://gitee.com/cosmoswong/markdownblog/blob/master/谷粒商城/谷粒商城—分布式高级.md). This can make finding exact matches for `text` field values difficult.
+>
+> 默认情况下，Elasticsearch作为[analysis](https://gitee.com/cosmoswong/markdownblog/blob/master/谷粒商城/谷粒商城—分布式高级.md)的一部分更改' text '字段的值。这使得为“text”字段值寻找精确匹配变得困难。
+>
+> To search `text` field values, use the match.
+>
+> 要搜索“text”字段值，请使用匹配。
+>
+> https://www.elastic.co/guide/en/elasticsearch/reference/7.6/query-dsl-term-query.html
+
+- 使用 term 匹配查询
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "term": {
+      "address": "mill Road"
+    }
+  }
+}
+```
+
+结果：
+
+```json
+{
+  "took" : 0,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 0,
+      "relation" : "eq"
+    },
+    "max_score" : null,
+    "hits" : [ ]
+  }
+}
+```
+
+一条文档也没有。
+
+- 使用 match 匹配
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823154300.png)
+
+能查到 32 条记录。
+
+**全文检索字段用match，其他非text字段匹配用term**。
+
+
+
+---
+
+
+
+##  Aggregation 执行聚合
+
+聚合提供了从数据中分组和提取数据的能力。最简单的聚合方法大致等于SQL Group by和SQL聚合函数。在elasticsearch中，执行搜索返回this（命中结果），并且同时返回聚合结果，把以响应中的所有hits（命中结果）分隔开的能力。这是非常强大且有效的，你可以执行查询和多个聚合，并且在一次使用中得到各自的（任何一个的）返回结果，使用一次简洁和简化的API啦避免网络往返。
+
+"size":0
+
+size:0不显示搜索数据 aggs：执行聚合。聚合语法如下：
+
+```shell
+"aggs":{
+    "aggs_name这次聚合的名字，方便展示在结果集中":{
+        "AGG_TYPE聚合的类型(avg,term,terms)":{}
+     }
+}
+```
+
+参考文档：https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-avg-aggregation.html
+
+### 搜索address中包含mill的所有人的年龄分布以及平均年龄，但不显示这些人的详情
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "match": {
+      "address": "Mill"
+    }
+  },
+  "aggs": {
+    "ageAgg": {
+      "terms": {
+        "field": "age",
+        "size": 10
+      }
+    },
+    "ageAvg": {
+      "avg": {
+        "field": "age"
+      }
+    },
+    "balanceAvg": {
+      "avg": {
+        "field": "balance"
+      }
+    }
+  },
+  "size": 0
+}
+```
+
+结果：
+
+```json
+{
+  "took" : 16,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 4,
+      "relation" : "eq"
+    },
+    "max_score" : null,
+    "hits" : [ ]
+  },
+  "aggregations" : {
+    "ageAgg" : {
+      "doc_count_error_upper_bound" : 0,
+      "sum_other_doc_count" : 0,
+      "buckets" : [
+        {
+          "key" : 38,
+          "doc_count" : 2
+        },
+        {
+          "key" : 28,
+          "doc_count" : 1
+        },
+        {
+          "key" : 32,
+          "doc_count" : 1
+        }
+      ]
+    },
+    "ageAvg" : {
+      "value" : 34.0
+    },
+    "balanceAvg" : {
+      "value" : 25208.0
+    }
+  }
+}
+```
+
+
+
+### 复杂： 按照年龄聚合，并且求这些年龄段的这些人的平均薪资
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "aggs": {
+    "ageAgg": {
+      "terms": {
+        "field": "age",
+        "size": 100
+      },
+      "aggs": {
+        "ageAvg": {
+          "avg": {
+            "field": "balance"
+          }
+        }
+      }
+    }
+  },
+  "size": 0
+}
+```
+
+结果：
+
+```json
+{
+  "took" : 6,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1000,
+      "relation" : "eq"
+    },
+    "max_score" : null,
+    "hits" : [ ]
+  },
+  "aggregations" : {
+    "ageAgg" : {
+      "doc_count_error_upper_bound" : 0,
+      "sum_other_doc_count" : 463,
+      "buckets" : [
+        {
+          "key" : 31,
+          "doc_count" : 61,
+          "ageAvg" : {
+            "value" : 28312.918032786885
+          }
+        },
+        {
+          "key" : 39,
+          "doc_count" : 60,
+          "ageAvg" : {
+            "value" : 25269.583333333332
+          }
+        },
+        {
+          "key" : 26,
+          "doc_count" : 59,
+          "ageAvg" : {
+            "value" : 23194.813559322032
+          }
+        },
+        {
+          "key" : 32,
+          "doc_count" : 52,
+          "ageAvg" : {
+            "value" : 23951.346153846152
+          }
+        },
+        {
+          "key" : 35,
+          "doc_count" : 52,
+          "ageAvg" : {
+            "value" : 22136.69230769231
+          }
+        },
+        {
+          "key" : 36,
+          "doc_count" : 52,
+          "ageAvg" : {
+            "value" : 22174.71153846154
+          }
+        },
+        {
+          "key" : 22,
+          "doc_count" : 51,
+          "ageAvg" : {
+            "value" : 24731.07843137255
+          }
+        },
+        {
+          "key" : 28,
+          "doc_count" : 51,
+          "ageAvg" : {
+            "value" : 28273.882352941175
+          }
+        },
+        {
+          "key" : 33,
+          "doc_count" : 50,
+          "ageAvg" : {
+            "value" : 25093.94
+          }
+        },
+        {
+          "key" : 34,
+          "doc_count" : 49,
+          "ageAvg" : {
+            "value" : 26809.95918367347
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+
+
+### 查出所有年龄分布，并且这些年龄段中M的平均薪资和F的平均薪资以及这个年龄段的总体平均薪资
+
+```shell
+GET bank/_search
+{
+  "query": {
+    "match_all": {}
+  },
+  "aggs": {
+    "ageAgg": {
+      "terms": {
+        "field": "age",
+        "size": 10
+      },
+      "aggs": {
+        "genderAgg": {
+          "terms": {
+            "field": "gender.keyword"
+          },
+          "aggs": {
+            "balanceAvg": {
+              "avg": {
+                "field": "balance"
+              }
+            }
+          }
+        },
+        "ageBalanceAvg": {
+          "avg": {
+            "field": "balance"
+          }
+        }
+      }
+    }
+  },
+  "size": 0
+}
+```
+
+结果：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823164516.png)
+
+
+
+---
+
+
+
+## Mapping 映射
+
+### 基本概念
+
+Mapping(映射) Maping是用来定义一个文档（document），以及它所包含的属性（field）是如何存储和索引的。比如：使用maping来定义：
+
+- 哪些字符串属性应该被看做全文本属性（full text fields）；
+- 哪些属性包含数字，日期或地理位置；
+- 文档中的所有属性是否都嫩被索引（all 配置）；
+- 日期的格式；
+- 自定义映射规则来执行动态添加属性；
+- 查看mapping信息 GET bank/_mapping
+
+**映射类型**：https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823201624.png)
+
+
+
+### 新版本变化
+
+ElasticSearch7-去掉type概念
+
+1. 关系型数据库中两个数据表示是独立的，即使他们里面有相同名称的列也不影响使用，但ES中不是这样的。elasticsearch是基于Lucene开发的搜索引擎，而ES中不同type下名称相同的filed最终在Lucene中的处理方式是一样的。
+   - 两个不同type下的两个user_name，在ES同一个索引下其实被认为是同一个filed，你必须在两个不同的type中定义相同的filed映射。否则，不同type中的相同字段名称就会在处理中出现冲突的情况，导致Lucene处理效率下降。
+   - 去掉type就是为了提高ES处理数据的效率。
+2. Elasticsearch 7.x URL中的type参数为可选。比如，索引一个文档不再要求提供文档类型。
+3. Elasticsearch 8.x 不再支持URL中的type参数。
+
+
+
+### 创建映射
+
+创建索引并指定映射
+
+```shell
+PUT /my_index
+{
+  "mappings": {
+    "properties": {
+      "age": {
+        "type": "integer"
+      },
+      "email": {
+        "type": "keyword"
+      },
+      "name": {
+        "type": "text"
+      }
+    }
+  }
+}
+```
+
+输出：
+
+```json
+{
+  "acknowledged" : true,
+  "shards_acknowledged" : true,
+  "index" : "my_index"
+}
+```
+
+
+
+### 查看映射
+
+```shell
+GET /my_index
+```
+
+输出：
+
+```json
+{
+  "my_index" : {
+    "aliases" : { },
+    "mappings" : {
+      "properties" : {
+        "age" : {
+          "type" : "integer"
+        },
+        "email" : {
+          "type" : "keyword"
+        },
+        "name" : {
+          "type" : "text"
+        }
+      }
+    },
+    "settings" : {
+      "index" : {
+        "creation_date" : "1598185097151",
+        "number_of_shards" : "1",
+        "number_of_replicas" : "1",
+        "uuid" : "Lvskaa5xSDuYa7DAHDostQ",
+        "version" : {
+          "created" : "7040299"
+        },
+        "provided_name" : "my_index"
+      }
+    }
+  }
+}
+```
+
+
+
+### 添加新的字段映射
+
+```shell
+PUT /my_index/_mapping
+{
+  "properties": {
+    "employee-id": {
+      "type": "keyword",
+      "index": false
+    }
+  }
+}
+```
+
+输出：
+
+```json
+{
+  "acknowledged" : true
+}
+```
+
+- 这里的 "index": false，表明新增的字段不能被检索，只是一个冗余字段。
+
+
+
+###  更新映射
+
+对于已经存在的字段映射，我们不能更新。更新必须创建新的索引，进行数据迁移。
+
+Except for supported [mapping parameters](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html), you can’t change the mapping or field type of an existing field. Changing an existing field could invalidate data that’s already indexed.
+
+If you need to change the mapping of a field in a data stream’s backing indices, see [*Change mappings and settings for a data stream*](https://www.elastic.co/guide/en/elasticsearch/reference/current/data-streams-change-mappings-and-settings.html).
+
+If you need to change the mapping of a field in other indices, create a new index with the correct mapping and [reindex](https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-reindex.html) your data into that index.
+
+Renaming a field would invalidate data already indexed under the old field name. Instead, add an [`alias`](https://www.elastic.co/guide/en/elasticsearch/reference/current/alias.html) field to create an alternate field name.
+
+### 数据迁移
+
+- 先创建new_twitter的正确映射。然后使用如下方式进行数据迁移。
+
+```shell
+POST reindex [固定写法]
+{
+  "source":{
+      "index":"twitter"
+   },
+  "dest":{
+      "index":"new_twitters"
+   }
+}
+```
+
+- 将旧索引的type下的数据进行迁移
+
+```shell
+POST reindex [固定写法]
+{
+  "source":{
+      "index":"twitter",
+      "twitter":"twitter"
+   },
+  "dest":{
+      "index":"new_twitters"
+   }
+}
+```
+
+https://www.elastic.co/guide/en/elasticsearch/reference/7.6/docs-reindex.html
+
+
+
+对 bank 进行操作。
+
+#### 查看基本信息
+
+```shell
+GET /bank/_search
+```
+
+```json
+{
+  "took" : 0,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1000,
+      "relation" : "eq"
+    },
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account", // 这里的数据还有有 type 的
+        "_id" : "1",
+        "_score" : 1.0,
+        "_source" : {
+          "account_number" : 1,
+          "balance" : 39225,
+          "firstname" : "Amber",
+          "lastname" : "Duke",
+          "age" : 32,
+          "gender" : "M",
+          "address" : "880 Holmes Lane",
+          "employer" : "Pyrami",
+          "email" : "amberduke@pyrami.com",
+          "city" : "Brogan",
+          "state" : "IL"
+        }
+      },
+      ...
+```
+
+如果我们不需要 type 了，就在迁移数据的时候去掉。
+
+```shell
+GET /bank/_mapping
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823204905.png)
+
+#### 需要将 mapping 类型改为 integer 。
+
+```json
+PUT /newbank
+{
+  "mappings": {
+    "properties": {
+      "account_number": {
+        "type": "long"
+      },
+      "address": {
+        "type": "text"
+      },
+      "age": {
+        "type": "integer"
+      },
+      "balance": {
+        "type": "long"
+      },
+      "city": {
+        "type": "keyword"
+      },
+      "email": {
+        "type": "keyword"
+      },
+      "employer": {
+        "type": "keyword"
+      },
+      "firstname": {
+        "type": "text"
+      },
+      "gender": {
+        "type": "keyword"
+      },
+      "lastname": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "state": {
+        "type": "keyword"
+      }
+    }
+  }
+}
+```
+
+输出：
+
+```json
+{
+  "acknowledged" : true,
+  "shards_acknowledged" : true,
+  "index" : "newbank"
+}
+```
+
+#### 查看“newbank”的映射：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823205154.png)
+
+将bank中的数据迁移到newbank中
+
+```shell
+POST _reindex
+{
+  "source": {
+    "index": "bank",
+    "type": "account"
+  },
+  "dest": {
+    "index": "newbank"
+  }
+}
+```
+
+```shell
+#! Deprecation: [types removal] Specifying types in reindex requests is deprecated.
+{
+  "took" : 1287,
+  "timed_out" : false,
+  "total" : 1000,
+  "updated" : 0,
+  "created" : 1000,
+  "deleted" : 0,
+  "batches" : 1,
+  "version_conflicts" : 0,
+  "noops" : 0,
+  "retries" : {
+    "bulk" : 0,
+    "search" : 0
+  },
+  "throttled_millis" : 0,
+  "requests_per_second" : -1.0,
+  "throttled_until_millis" : 0,
+  "failures" : [ ]
+}
+```
+
+
+
 
