@@ -363,10 +363,70 @@ PUT和POST都可以 POST新增。如果不指定id，会自动生成id。指定i
 
 ---
 
-### 3、查看文档
+### 3、查看文档&&乐观锁
 
+GET /customer/external/1
 
+http://47.96.30.109:9200/customer/external
 
+```json
+{
+    "_index": "customer", // 在哪个索引
+    "_type": "external",  // 在哪个类型
+    "_id": "1",  // 记录ID
+    "_version": 2,  // 版本号
+    "_seq_no": 1,  // 并发控制字段，每次更新都会+1，用来做乐观锁
+    "_primary_term": 1,  // 并发控制字段，主分片重新分配，如果重启就会变化
+    "found": true,
+    "_source": {
+        "name": "John Doe"
+    }
+}
+```
 
+- 乐观锁演示：
+
+**通过“if_seq_no=1&if_primary_term=1 ”，当序列号匹配的时候，才进行修改，否则不修改。**
+
+实例：将id=1的数据更新为name=“Jack”，然后再次更新为name=“Jack2”，起始_seq_no=6，_primary_term=1
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823101712.png)
+
+将name更新为"Jack"，更新过程中使用seq_no=6
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823102008.png)
+
+出现更新错误。
+
+如果要更新成功，需要先查询得到seq_no再更新。
+
+```shell
+GET http://47.96.30.109:9200/customer/external/1
+```
+
+```json
+{
+    "_index": "customer",
+    "_type": "external",
+    "_id": "1",
+    "_version": 4,
+    "_seq_no": 7,
+    "_primary_term": 1,
+    "found": true,
+    "_source": {
+        "name": "Jack"
+    }
+}
+```
+
+这时候 seq_no=7
+
+再次尝试更新：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823102226.png)
+
+---
+
+### 4、更新文档
 
 
