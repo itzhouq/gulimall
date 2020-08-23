@@ -1,6 +1,5 @@
 
 
-
 # ElasticSearch
 
 
@@ -248,5 +247,51 @@ docker update kibana  --restart=always
 
 
 ## 初步检索
+
+### 1、_CAT
+
+- GET/*cat/nodes：查看所有节点*
+
+http://47.96.30.109:9200/_cat/nodes
+
+```shell
+127.0.0.1 72 95 3 0.82 0.87 0.57 dilm * a6507718ac70
+```
+
+> *表示集群中的主节点 
+
+- GET/_cat/health：查看es健康状况
+
+http://47.96.30.109:9200/_cat/health
+
+```shell
+1598146362 01:32:42 elasticsearch green 1 1 3 3 0 0 0 0 - 100.0%
+```
+
+> green表示健康值正常
+
+- GET/_cat/master：查看主节点
+
+http://47.96.30.109:9200/_cat/master
+
+```shell
+3aqr23nORWOfc5ttsbHbGg 127.0.0.1 127.0.0.1 a6507718ac70
+```
+
+> a6507718ac70 是主节点的名字，3aqr23nORWOfc5ttsbHbGg 是唯一标识
+
+- GET/_cat/indicies：查看所有索引 ，等价于mysql数据库的show databases
+
+http://47.96.30.109:9200/_cat/indices
+
+```shell
+green open .kibana_task_manager_1   8b_JqijJS8-mnpJNx_kAzg 1 0 2 0 30.5kb 30.5kb
+green open .apm-agent-configuration EUqx3wAcT0-aoSNFdl6JCQ 1 0 0 0   283b   283b
+green open .kibana_1                AyRIt6NsTIqA8IOLDMPiYw 1 0 8 0 25.3kb 25.3kb
+```
+
+
+
+### 2、索引一个文档
 
 
