@@ -491,3 +491,46 @@ POST更新方式，会对比原来的数据，和原来的相同，则不执行�
 
 
 ### 5、删除文档或索引
+
+```shell
+DELETE customer/external/1
+DELETE customer
+```
+
+> 注：elasticsearch并没有提供删除类型的操作，只提供了删除索引和文档的操作。
+
+- 删除id=1的数据，删除后继续查询
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823105503.png)
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823105524.png)
+
+---
+
+- 删除整个costomer索引数据
+
+删除的索引:
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823105631.png)
+
+删除“ customer ”索引
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823105717.png)
+
+删除“customer”索引之后的索引：
+
+```shell
+green open .kibana_task_manager_1   8b_JqijJS8-mnpJNx_kAzg 1 0 2 0 30.5kb 30.5kb
+green open .apm-agent-configuration EUqx3wAcT0-aoSNFdl6JCQ 1 0 0 0   283b   283b
+green open .kibana_1                AyRIt6NsTIqA8IOLDMPiYw 1 0 8 0 25.3kb 25.3kb
+```
+
+---
+
+
+
+### 6、批量操作
+
+
+
+
