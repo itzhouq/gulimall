@@ -1803,9 +1803,345 @@ GET bank/_search
 
 
 
+## Mapping 映射
+
+### 基本概念
+
+Mapping(映射) Maping是用来定义一个文档（document），以及它所包含的属性（field）是如何存储和索引的。比如：使用maping来定义：
+
+- 哪些字符串属性应该被看做全文本属性（full text fields）；
+- 哪些属性包含数字，日期或地理位置；
+- 文档中的所有属性是否都嫩被索引（all 配置）；
+- 日期的格式；
+- 自定义映射规则来执行动态添加属性；
+- 查看mapping信息 GET bank/_mapping
+
+**映射类型**：https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823201624.png)
 
 
 
+### 新版本变化
+
+ElasticSearch7-去掉type概念
+
+1. 关系型数据库中两个数据表示是独立的，即使他们里面有相同名称的列也不影响使用，但ES中不是这样的。elasticsearch是基于Lucene开发的搜索引擎，而ES中不同type下名称相同的filed最终在Lucene中的处理方式是一样的。
+   - 两个不同type下的两个user_name，在ES同一个索引下其实被认为是同一个filed，你必须在两个不同的type中定义相同的filed映射。否则，不同type中的相同字段名称就会在处理中出现冲突的情况，导致Lucene处理效率下降。
+   - 去掉type就是为了提高ES处理数据的效率。
+2. Elasticsearch 7.x URL中的type参数为可选。比如，索引一个文档不再要求提供文档类型。
+3. Elasticsearch 8.x 不再支持URL中的type参数。
+
+
+
+### 创建映射
+
+创建索引并指定映射
+
+```shell
+PUT /my_index
+{
+  "mappings": {
+    "properties": {
+      "age": {
+        "type": "integer"
+      },
+      "email": {
+        "type": "keyword"
+      },
+      "name": {
+        "type": "text"
+      }
+    }
+  }
+}
+```
+
+输出：
+
+```json
+{
+  "acknowledged" : true,
+  "shards_acknowledged" : true,
+  "index" : "my_index"
+}
+```
+
+
+
+### 查看映射
+
+```shell
+GET /my_index
+```
+
+输出：
+
+```json
+{
+  "my_index" : {
+    "aliases" : { },
+    "mappings" : {
+      "properties" : {
+        "age" : {
+          "type" : "integer"
+        },
+        "email" : {
+          "type" : "keyword"
+        },
+        "name" : {
+          "type" : "text"
+        }
+      }
+    },
+    "settings" : {
+      "index" : {
+        "creation_date" : "1598185097151",
+        "number_of_shards" : "1",
+        "number_of_replicas" : "1",
+        "uuid" : "Lvskaa5xSDuYa7DAHDostQ",
+        "version" : {
+          "created" : "7040299"
+        },
+        "provided_name" : "my_index"
+      }
+    }
+  }
+}
+```
+
+
+
+### 添加新的字段映射
+
+```shell
+PUT /my_index/_mapping
+{
+  "properties": {
+    "employee-id": {
+      "type": "keyword",
+      "index": false
+    }
+  }
+}
+```
+
+输出：
+
+```json
+{
+  "acknowledged" : true
+}
+```
+
+- 这里的 "index": false，表明新增的字段不能被检索，只是一个冗余字段。
+
+
+
+###  更新映射
+
+对于已经存在的字段映射，我们不能更新。更新必须创建新的索引，进行数据迁移。
+
+Except for supported [mapping parameters](https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html), you can’t change the mapping or field type of an existing field. Changing an existing field could invalidate data that’s already indexed.
+
+If you need to change the mapping of a field in a data stream’s backing indices, see [*Change mappings and settings for a data stream*](https://www.elastic.co/guide/en/elasticsearch/reference/current/data-streams-change-mappings-and-settings.html).
+
+If you need to change the mapping of a field in other indices, create a new index with the correct mapping and [reindex](https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-reindex.html) your data into that index.
+
+Renaming a field would invalidate data already indexed under the old field name. Instead, add an [`alias`](https://www.elastic.co/guide/en/elasticsearch/reference/current/alias.html) field to create an alternate field name.
+
+### 数据迁移
+
+- 先创建new_twitter的正确映射。然后使用如下方式进行数据迁移。
+
+```shell
+POST reindex [固定写法]
+{
+  "source":{
+      "index":"twitter"
+   },
+  "dest":{
+      "index":"new_twitters"
+   }
+}
+```
+
+- 将旧索引的type下的数据进行迁移
+
+```shell
+POST reindex [固定写法]
+{
+  "source":{
+      "index":"twitter",
+      "twitter":"twitter"
+   },
+  "dest":{
+      "index":"new_twitters"
+   }
+}
+```
+
+https://www.elastic.co/guide/en/elasticsearch/reference/7.6/docs-reindex.html
+
+
+
+对 bank 进行操作。
+
+#### 查看基本信息
+
+```shell
+GET /bank/_search
+```
+
+```json
+{
+  "took" : 0,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 1000,
+      "relation" : "eq"
+    },
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "bank",
+        "_type" : "account", // 这里的数据还有有 type 的
+        "_id" : "1",
+        "_score" : 1.0,
+        "_source" : {
+          "account_number" : 1,
+          "balance" : 39225,
+          "firstname" : "Amber",
+          "lastname" : "Duke",
+          "age" : 32,
+          "gender" : "M",
+          "address" : "880 Holmes Lane",
+          "employer" : "Pyrami",
+          "email" : "amberduke@pyrami.com",
+          "city" : "Brogan",
+          "state" : "IL"
+        }
+      },
+      ...
+```
+
+如果我们不需要 type 了，就在迁移数据的时候去掉。
+
+```shell
+GET /bank/_mapping
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823204905.png)
+
+#### 需要将 mapping 类型改为 integer 。
+
+```json
+PUT /newbank
+{
+  "mappings": {
+    "properties": {
+      "account_number": {
+        "type": "long"
+      },
+      "address": {
+        "type": "text"
+      },
+      "age": {
+        "type": "integer"
+      },
+      "balance": {
+        "type": "long"
+      },
+      "city": {
+        "type": "keyword"
+      },
+      "email": {
+        "type": "keyword"
+      },
+      "employer": {
+        "type": "keyword"
+      },
+      "firstname": {
+        "type": "text"
+      },
+      "gender": {
+        "type": "keyword"
+      },
+      "lastname": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "state": {
+        "type": "keyword"
+      }
+    }
+  }
+}
+```
+
+输出：
+
+```json
+{
+  "acknowledged" : true,
+  "shards_acknowledged" : true,
+  "index" : "newbank"
+}
+```
+
+#### 查看“newbank”的映射：
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823205154.png)
+
+将bank中的数据迁移到newbank中
+
+```shell
+POST _reindex
+{
+  "source": {
+    "index": "bank",
+    "type": "account"
+  },
+  "dest": {
+    "index": "newbank"
+  }
+}
+```
+
+```shell
+#! Deprecation: [types removal] Specifying types in reindex requests is deprecated.
+{
+  "took" : 1287,
+  "timed_out" : false,
+  "total" : 1000,
+  "updated" : 0,
+  "created" : 1000,
+  "deleted" : 0,
+  "batches" : 1,
+  "version_conflicts" : 0,
+  "noops" : 0,
+  "retries" : {
+    "bulk" : 0,
+    "search" : 0
+  },
+  "throttled_millis" : 0,
+  "requests_per_second" : -1.0,
+  "throttled_until_millis" : 0,
+  "failures" : [ ]
+}
+```
 
 
 
