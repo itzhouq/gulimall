@@ -529,8 +529,184 @@ green open .kibana_1                AyRIt6NsTIqA8IOLDMPiYw 1 0 8 0 25.3kb 25.3kb
 
 
 
-### 6、批量操作
+### 6、批量操作--bulk
+
+语法格式：
+
+```json
+{action:{metadata}}\n
+{request body  }\n
+
+{action:{metadata}}\n
+{request body  }\n
+```
+
+这里的批量操作，当发生某一条执行发生失败时，其他的数据仍然能够接着执行，也就是说彼此之间是独立的。
+
+bulk api 以此按顺序执行所有的action（动作）。如果一个单个的动作因任何原因失败，它将继续处理它后面剩余的动作。当bulk api返回时，它将提供每个动作的状态（与发送的顺序相同），所以您可以检查是否一个指定的动作是否失败了。
+
+- 执行多条数据
+
+```shell
+POST customer/external/_bulk
+{"index":{"_id":"1"}}
+{"name":"John Doe"}
+{"index":{"_id":"2"}}
+{"name":"John Doe"}
+```
 
 
+
+在 Kibana 的 Dev Tools 中测试。
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823111317.png)
+
+
+
+- 对于整个索引执行批量操作
+
+```shell
+POST /_bulk
+{"delete":{"_index":"website","_type":"blog","_id":"123"}}
+{"create":{"_index":"website","_type":"blog","_id":"123"}}
+{"title":"my first blog post"}
+{"index":{"_index":"website","_type":"blog"}}
+{"title":"my second blog post"}
+{"update":{"_index":"website","_type":"blog","_id":"123"}}
+{"doc":{"title":"my updated blog post"}}
+```
+
+结果：took 是花费的时间
+
+```json
+#! Deprecation: [types removal] Specifying types in bulk requests is deprecated.
+{
+  "took" : 280,
+  "errors" : false,
+  "items" : [
+    {
+      "delete" : {
+        "_index" : "website",
+        "_type" : "blog",
+        "_id" : "123",
+        "_version" : 1,
+        "result" : "not_found",
+        "_shards" : {
+          "total" : 2,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "_seq_no" : 0,
+        "_primary_term" : 1,
+        "status" : 404
+      }
+    },
+    {
+      "create" : {
+        "_index" : "website",
+        "_type" : "blog",
+        "_id" : "123",
+        "_version" : 2,
+        "result" : "created",
+        "_shards" : {
+          "total" : 2,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "_seq_no" : 1,
+        "_primary_term" : 1,
+        "status" : 201
+      }
+    },
+    {
+      "index" : {
+        "_index" : "website",
+        "_type" : "blog",
+        "_id" : "lqRPGXQBE-bXaLhHITps",
+        "_version" : 1,
+        "result" : "created",
+        "_shards" : {
+          "total" : 2,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "_seq_no" : 2,
+        "_primary_term" : 1,
+        "status" : 201
+      }
+    },
+    {
+      "update" : {
+        "_index" : "website",
+        "_type" : "blog",
+        "_id" : "123",
+        "_version" : 3,
+        "result" : "updated",
+        "_shards" : {
+          "total" : 2,
+          "successful" : 1,
+          "failed" : 0
+        },
+        "_seq_no" : 3,
+        "_primary_term" : 1,
+        "status" : 200
+      }
+    }
+  ]
+}
+```
+
+---
+
+
+
+### 7、测试数据
+
+准备了一份顾客银行账户信息的虚构的 JSON 文档样本。每个文档都有下列的schema（模式）。
+
+```json
+{
+	"account_number": 1,
+	"balance": 39225,
+	"firstname": "Amber",
+	"lastname": "Duke",
+	"age": 32,
+	"gender": "M",
+	"address": "880 Holmes Lane",
+	"employer": "Pyrami",
+	"email": "amberduke@pyrami.com",
+	"city": "Brogan",
+	"state": "IL"
+}
+```
+
+https://raw.githubusercontent.com/elastic/elasticsearch/master/docs/src/test/resources/accounts.json 导入测试数据。
+
+```json
+POST bank/account/_bulk
+```
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200823111820.png)
+
+
+
+- 查看索引
+
+```json
+yellow open bank                     uvHeH4FwQ22Fp3zAxmddjQ 1 1 1000 0 426.9kb 426.9kb
+yellow open website                  qt3FK24STyaVDH9fi6Ewuw 1 1    2 2   8.4kb   8.4kb
+green  open .kibana_task_manager_1   8b_JqijJS8-mnpJNx_kAzg 1 0    2 0  30.5kb  30.5kb
+green  open .apm-agent-configuration EUqx3wAcT0-aoSNFdl6JCQ 1 0    0 0    283b    283b
+green  open .kibana_1                AyRIt6NsTIqA8IOLDMPiYw 1 0    8 0  25.3kb  25.3kb
+yellow open customer                 BmLPdrUyS42Wb_Szwp6N2A 1 1    2 0   3.5kb   3.5kb
+```
+
+
+
+---
+
+
+
+## 检索进阶
 
 
