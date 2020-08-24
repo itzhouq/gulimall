@@ -24,6 +24,10 @@ public class GulimallSearchApplicationTests {
     @Resource
     private RestHighLevelClient restHighLevelClient;
 
+    /**
+     * 测试存储数据，更新数据
+     * @throws IOException
+     */
     @Test
     public void indexData() throws IOException {
         IndexRequest indexRequest = new IndexRequest("users");
