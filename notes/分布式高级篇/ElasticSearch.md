@@ -2436,6 +2436,64 @@ index.html
 
 
 
+## Spring Boot 整合 ElasticSearch
+
+### 引入
+
+使用 elasticsearch-rest-high-level-client 客户端。
+
+官方文档：https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high-getting-started-initialization.html
+
+- 导入依赖
+
+```shell
+<dependency>
+    <groupId>org.elasticsearch.client</groupId>
+    <artifactId>elasticsearch-rest-high-level-client</artifactId>
+    <version>7.4.2</version>
+</dependency>
+```
+
+- 配置类:参考文档配置
+
+```java
+/**
+ * @author itzhouq
+ * @date 2020/8/24 21:54
+ */
+
+@Configuration
+@EnableDiscoveryClient
+public class GuliamllElasticSearchConfig {
+
+    @Bean
+    public RestHighLevelClient restHighLevelClient() {
+        return new RestHighLevelClient(RestClient.builder(new HttpHost("47.96.30.109", 9200, "http")));
+    }
+}
+```
+
+- 测试
+
+```java
+@Resource
+private RestHighLevelClient restHighLevelClient;
+
+@Test
+public void contextLoads() {
+  System.out.println(restHighLevelClient);
+  //org.elasticsearch.client.RestHighLevelClient@64d93096
+}
+```
+
+
+
+---
+
+
+
+### 测试保存更新
+
 
 
 
