@@ -2143,6 +2143,303 @@ POST _reindex
 }
 ```
 
+---
+
+
+
+## 分词器&&Nginx
+
+一个tokenizer（分词器）接收一个字符流，将之分割为独立的tokens（词元，通常是独立的单词），然后输出tokens流。
+
+例如：whitespace tokenizer遇到空白字符时分割文本。它会将文本“Quick brown fox!”分割为[Quick,brown,fox!]。
+
+该tokenizer（分词器）还负责记录各个terms(词条)的顺序或position位置（用于phrase短语和word proximity词近邻查询），以及term（词条）所代表的原始word（单词）的start（起始）和end（结束）的character offsets（字符串偏移量）（用于高亮显示搜索的内容）。
+
+elasticsearch提供了很多内置的分词器，可以用来构建custom analyzers（自定义分词器）。
+
+关于分词器： https://www.elastic.co/guide/en/elasticsearch/reference/7.6/analysis.html
+
+### 安装分词器
+
+分词器版本需要和 ElasticSearch 版本对应。
+
+https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v7.4.2/elasticsearch-analysis-ik-7.4.2.zip
+
+在前面安装的 elasticsearch 时，我们已经 elasticsearch 容器的“/usr/share/elasticsearch/plugins”目录，映射到宿主机的“ /mydata/elasticsearch/plugins”目录下，所以比较方便的做法就是下载“/elasticsearch-analysis-ik-7.4.2.zip”文件，然后解压到该文件夹下即可。安装完毕后，需要重启elasticsearch容器。
+
+```shell
+[root@itzhouc plugins]# pwd
+/mydata/elasticsearch/plugins
+[root@itzhouc plugins]# wget https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v7.4.2/elasticsearch-analysis-ik-7.4.2.zip
+[root@itzhouc plugins]# uzip elasticsearch-analysis-ik-7.4.2.zip
+[root@itzhouc plugins]# cd ik
+[root@itzhouc ik]# ls
+commons-codec-1.9.jar    config                               httpclient-4.5.2.jar  plugin-descriptor.properties
+commons-logging-1.2.jar  elasticsearch-analysis-ik-7.4.2.jar  httpcore-4.4.4.jar    plugin-security.policy
+[root@itzhouc ik]# pwd
+/mydata/elasticsearch/plugins/ik
+[root@itzhouc plugins]# docker restart elasticsearch 
+```
+
+
+
+### 测试分词器
+
+```shell
+GET my_index/_analyze
+{
+   "analyzer": "ik_smart", 
+   "text":"我是中国人"
+}
+```
+
+输出：
+
+```json
+{
+  "tokens" : [
+    {
+      "token" : "我",
+      "start_offset" : 0,
+      "end_offset" : 1,
+      "type" : "CN_CHAR",
+      "position" : 0
+    },
+    {
+      "token" : "是",
+      "start_offset" : 1,
+      "end_offset" : 2,
+      "type" : "CN_CHAR",
+      "position" : 1
+    },
+    {
+      "token" : "中国人",
+      "start_offset" : 2,
+      "end_offset" : 5,
+      "type" : "CN_WORD",
+      "position" : 2
+    }
+  ]
+}
+```
+
+ik 分词器安装成功。
+
+
+
+---
+
+
+
+### 自定义词库
+
+Ik 分词器有时候还是不能满足分词需求，比如一些比较新的网络用语，不能识别进行分词。为了解决这个问题，需要我们自定义词库。
+
+自定义字库的基本思路是修改 ik 分词的配置文件 `/ik/config/IKAnalyzer.cfg.xml`，让 ik 分词器向远程词库发送请求得到最新的单词。远程词库可以借助于 nginx。nginx 的安装配置参考 nginx 配置部分。
+
+- 修改配置：/mydata/elasticsearch/plugins/ik/config/IKAnalyzer.cfg.xml
+
+```shell
+[root@itzhouc config]# pwd
+/mydata/elasticsearch/plugins/ik/config
+[root@itzhouc config]# ls
+extra_main.dic         extra_single_word_full.dic      extra_stopword.dic  main.dic         quantifier.dic  suffix.dic
+extra_single_word.dic  extra_single_word_low_freq.dic  IKAnalyzer.cfg.xml  preposition.dic  stopword.dic    surname.dic
+[root@itzhouc config]#
+```
+
+原配置：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+        <comment>IK Analyzer 扩展配置</comment>
+        <!--用户可以在这里配置自己的扩展字典 -->
+        <entry key="ext_dict"></entry>
+         <!--用户可以在这里配置自己的扩展停止词字典-->
+        <entry key="ext_stopwords"></entry>
+        <!--用户可以在这里配置远程扩展字典 -->
+        <!-- <entry key="remote_ext_dict">words_location</entry> -->
+        <!--用户可以在这里配置远程扩展停止词字典-->
+        <!-- <entry key="remote_ext_stopwords">words_location</entry> -->
+</properties>
+```
+
+修改后：
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+        <comment>IK Analyzer 扩展配置</comment>
+        <!--用户可以在这里配置自己的扩展字典 -->
+        <entry key="ext_dict"></entry>
+         <!--用户可以在这里配置自己的扩展停止词字典-->
+        <entry key="ext_stopwords"></entry>
+        <!--用户可以在这里配置远程扩展字典 -->
+        <entry key="remote_ext_dict">http://47.96.30.109/es/fenci.txt</entry>
+        <!--用户可以在这里配置远程扩展停止词字典-->
+        <!-- <entry key="remote_ext_stopwords">words_location</entry> -->
+</properties>
+```
+
+- 重启 ES
+
+```shell
+[root@itzhouc config]# docker restart elasticsearch
+```
+
+- 在 Kibana 中测试
+
+```shell
+GET /my_index/_analyze
+{
+   "analyzer": "ik_max_word", 
+   "text":"乔碧萝殿下"
+}
+```
+
+结果：
+
+```json
+{
+  "tokens" : [
+    {
+      "token" : "乔碧萝",
+      "start_offset" : 0,
+      "end_offset" : 3,
+      "type" : "CN_WORD",
+      "position" : 0
+    },
+    {
+      "token" : "殿下",
+      "start_offset" : 3,
+      "end_offset" : 5,
+      "type" : "CN_WORD",
+      "position" : 1
+    }
+  ]
+}
+```
+
+---
+
+
+
+## Nginx 安装配置
+
+- 拉取镜像
+
+```shell
+[root@itzhouc ~]# docker pull nginx:1.10
+```
+
+- 随便启动一个nginx实例，只是为了复制出配置
+
+```shell
+docker run -p80:80 --name nginx -d nginx:1.10   
+```
+
+- 将容器内的配置文件拷贝到/mydata/nginx/conf/ 下
+
+```shell
+[root@itzhouc mydata]# pwd
+/mydata
+[root@itzhouc mydata]# ls
+elasticsearch  mysql  nginx  redis
+[root@itzhouc mydata]# docker container cp nginx:/etc/nginx .   # 将容器内的配置文件拷贝出来
+[root@itzhouc mydata]# ls
+elasticsearch  mysql  nginx  redis
+[root@itzhouc mydata]# cd nginx/
+[root@itzhouc nginx]# ls
+conf.d  fastcgi_params  koi-utf  koi-win  mime.types  modules  nginx.conf  scgi_params  uwsgi_params  win-utf
+[root@itzhouc nginx]# docker stop nginx
+nginx
+[root@itzhouc nginx]# docker rm nginx
+nginx
+[root@itzhouc nginx]# cd ../
+[root@itzhouc mydata]# ls
+elasticsearch  mysql  nginx  redis
+[root@itzhouc mydata]# mv nginx conf  # 重命名
+[root@itzhouc mydata]# ls
+conf  elasticsearch  mysql  redis
+[root@itzhouc mydata]# mkdir nginx
+[root@itzhouc mydata]# mv conf nginx/  # 移动文件
+[root@itzhouc mydata]# ls
+elasticsearch  mysql  nginx  redis
+[root@itzhouc mydata]# cd nginx
+[root@itzhouc nginx]# ls
+conf
+[root@itzhouc nginx]#
+```
+
+- 创建新的Nginx
+
+```shell
+docker run -p 80:80 --name nginx \
+ -v /mydata/nginx/html:/usr/share/nginx/html \
+ -v /mydata/nginx/logs:/var/log/nginx \
+ -v /mydata/nginx/conf/:/etc/nginx \
+ -d nginx:1.10
+```
+
+- 设置开机启动 nginx
+
+```shell
+docker update nginx --restart=always
+```
+
+- 创建“/mydata/nginx/html/index.html”文件，测试是否能够正常访问
+
+```shell
+[root@itzhouc nginx]# ls
+conf  html  logs
+[root@itzhouc nginx]# cd html/
+[root@itzhouc html]# echo '<h2>hello nginx!</h2>' >index.html
+[root@itzhouc html]# ls
+index.html
+```
+
+访问：http://47.96.30.109/
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200824210756.png)
+
+
+
+> 云服务器需要开启端口
+
+### 创建自定义词库
+
+```shell
+[root@itzhouc html]# mkdir es
+[root@itzhouc html]# cd es
+[root@itzhouc es]# vim fenci.txt
+```
+
+写入：
+
+```shell
+乔碧萝
+尚硅谷
+```
+
+访问：http://47.96.30.109/es/fenci.txt
+
+![](https://gitee.com/itzhouq/images/raw/master/notes/20200824211333.png)
+
+自定义词库能访问。再去配置 ik 的配置文件。
+
+
+
+---
+
+
+
+
+
+
+
 
 
 
