@@ -2490,13 +2490,104 @@ public void contextLoads() {
 
 ---
 
+### 设置项
 
+文档：https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-low-usage-requests.html#java-rest-low-usage-request-options
+
+在配置类中添加设置项：
+
+```java
+public static final RequestOptions COMMON_OPTIONS;
+static {
+  RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
+  //        builder.addHeader("Authorization", "Bearer " + TOKEN);
+  //        builder.setHttpAsyncResponseConsumerFactory(
+  //                new HttpAsyncResponseConsumerFactory
+  //                        .HeapBufferedResponseConsumerFactory(30 * 1024 * 1024 * 1024));
+  COMMON_OPTIONS = builder.build();
+}
+```
 
 ### 测试保存更新
 
+文档：https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high-document-index.html
 
+```java
+@Test
+public void indexData() throws IOException {
+  IndexRequest indexRequest = new IndexRequest("users");
+  indexRequest.id("1");
+  User user = new User();
+  user.setUserName("Jack");
+  user.setAge(22);
+  user.setGender("男");
+  String jsonString = JSON.toJSONString(user);
+  // 设置要保存的内容
+  indexRequest.source(jsonString, XContentType.JSON);
+  // 执行创建索引和保存数据
+  IndexResponse index = restHighLevelClient.index(indexRequest, GulimallElasticSearchConfig.COMMON_OPTIONS);
+  System.out.println(index);
+}
 
+@Data
+class User {
+  private String userName;
+  private String gender;
+  private Integer age;
+}
+```
 
+查询：
+
+```shell
+GET users/_search
+```
+
+结果：
+
+```JSON
+{
+  "took" : 874,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 2,
+      "relation" : "eq"
+    },
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "users",
+        "_type" : "_doc",
+        "_id" : "AhfwIHQBUPyF98YwDbov",
+        "_score" : 1.0,
+        "_source" : {
+          "age" : 20,
+          "gender" : "男",
+          "userName" : "Jack"
+        }
+      },
+      {
+        "_index" : "users",
+        "_type" : "_doc",
+        "_id" : "1",
+        "_score" : 1.0,
+        "_source" : {
+          "age" : 22,
+          "gender" : "男",
+          "userName" : "Jack"
+        }
+      }
+    ]
+  }
+}
+```
 
 
 
