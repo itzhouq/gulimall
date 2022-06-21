@@ -17,7 +17,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>1.8</java.version>
         <mybatisplus.version>3.3.1</mybatisplus.version>
-        <mysql.version>8.0.17</mysql.version>
+        <mysql.version>8.0.28</mysql.version>
         <druid.version>1.1.13</druid.version>
         <quartz.version>2.3.0</quartz.version>
         <commons.lang.version>2.6</commons.lang.version>
